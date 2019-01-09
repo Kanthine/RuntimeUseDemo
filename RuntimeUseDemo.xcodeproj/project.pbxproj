@@ -14,6 +14,7 @@
 		1A47DC6121E5A7440084F964 /* MainTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A47DC6021E5A7440084F964 /* MainTableViewController.m */; };
 		1A47DC6521E5C45F0084F964 /* FatherModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A47DC6421E5C45F0084F964 /* FatherModel.m */; };
 		1A47DC6821E5C4720084F964 /* SonModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A47DC6721E5C4720084F964 /* SonModel.m */; };
+		2247D26F21E6501700D5519C /* Model.m in Sources */ = {isa = PBXBuildFile; fileRef = 2247D26E21E6501700D5519C /* Model.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,8 @@
 		1A47DC6421E5C45F0084F964 /* FatherModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FatherModel.m; sourceTree = "<group>"; };
 		1A47DC6621E5C4720084F964 /* SonModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SonModel.h; sourceTree = "<group>"; };
 		1A47DC6721E5C4720084F964 /* SonModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SonModel.m; sourceTree = "<group>"; };
+		2247D26D21E6501700D5519C /* Model.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Model.h; sourceTree = "<group>"; };
+		2247D26E21E6501700D5519C /* Model.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Model.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +69,7 @@
 				1A47DC4A21E5A6630084F964 /* AppDelegate.m */,
 				1A47DC5F21E5A7440084F964 /* MainTableViewController.h */,
 				1A47DC6021E5A7440084F964 /* MainTableViewController.m */,
+				2247D26C21E64FEC00D5519C /* Category */,
 				1A47DC6221E5C42A0084F964 /* Model */,
 				1A47DC5221E5A6650084F964 /* Assets.xcassets */,
 				1A47DC5421E5A6650084F964 /* LaunchScreen.storyboard */,
@@ -82,8 +86,17 @@
 				1A47DC6421E5C45F0084F964 /* FatherModel.m */,
 				1A47DC6621E5C4720084F964 /* SonModel.h */,
 				1A47DC6721E5C4720084F964 /* SonModel.m */,
+				2247D26D21E6501700D5519C /* Model.h */,
+				2247D26E21E6501700D5519C /* Model.m */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		2247D26C21E64FEC00D5519C /* Category */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Category;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -158,6 +171,7 @@
 				1A47DC5921E5A6650084F964 /* main.m in Sources */,
 				1A47DC4B21E5A6630084F964 /* AppDelegate.m in Sources */,
 				1A47DC6121E5A7440084F964 /* MainTableViewController.m in Sources */,
+				2247D26F21E6501700D5519C /* Model.m in Sources */,
 				1A47DC6521E5C45F0084F964 /* FatherModel.m in Sources */,
 				1A47DC6821E5C4720084F964 /* SonModel.m in Sources */,
 			);
