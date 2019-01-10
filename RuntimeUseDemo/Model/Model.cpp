@@ -33971,47 +33971,6 @@ static void _I_Model_setHelper_(Model * self, SEL _cmd, ModelHelper *helper) { (
 
 
 
-// @interface SuperModel (Test)
-<ObjectDelegate>
-// @property (nonatomic ,strong) NSString *nickName;
-// - (void)logNickName;
-// + (void)logHello;
-/* @end */
-
-
-
-// @implementation SuperModel (Test)
-
-
-static void _I_SuperModel_Test_logNickName(SuperModel * self, SEL _cmd) {
-    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_15,class_getName(((Class (*)(id, SEL))(void *)objc_msgSend)((id)self, sel_registerName("class"))));
-}
-
-
-static void _C_SuperModel_Test_logHello(Class self, SEL _cmd) {
-    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_16,class_getName(((Class (*)(id, SEL))(void *)objc_msgSend)((id)self, sel_registerName("class"))));
-}
-
-
-static void _I_SuperModel_Test_setNickName_(SuperModel * self, SEL _cmd, NSString *nickName) {
-    objc_setAssociatedObject(self, sel_registerName("nickName"), nickName, OBJC_ASSOCIATION_COPY_NONATOMIC);
-}
-
-
-static NSString * _I_SuperModel_Test_nickName(SuperModel * self, SEL _cmd) {
-    return objc_getAssociatedObject(self, _cmd);
-}
-
-
-
-
-
-static void _I_SuperModel_Test_logObjectInfo(SuperModel * self, SEL _cmd) {
-    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_17);
-}
-
-// @end
-
 struct _prop_t {
 	const char *name;
 	const char *attributes;
@@ -34061,22 +34020,6 @@ struct _class_ro_t {
 	const struct _prop_list_t *properties;
 };
 
-struct _class_t {
-	struct _class_t *isa;
-	struct _class_t *superclass;
-	void *cache;
-	void *vtable;
-	struct _class_ro_t *ro;
-};
-
-struct _category_t {
-	const char *name;
-	struct _class_t *cls;
-	const struct _method_list_t *instance_methods;
-	const struct _method_list_t *class_methods;
-	const struct _protocol_list_t *protocols;
-	const struct _prop_list_t *properties;
-};
 extern "C" __declspec(dllimport) struct objc_cache _objc_empty_cache;
 #pragma warning(disable:4273)
 
@@ -34356,28 +34299,6 @@ __declspec(allocate(".objc_inithooks$B")) static void *OBJC_CLASS_SETUP[] = {
 	(void *)&OBJC_CLASS_SETUP_$_ModelChild,
 };
 
-static struct /*_method_list_t*/ {
-	unsigned int entsize;  // sizeof(struct _objc_method)
-	unsigned int method_count;
-	struct _objc_method method_list[4];
-} _OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	sizeof(_objc_method),
-	4,
-	{{(struct objc_selector *)"logNickName", "v16@0:8", (void *)_I_SuperModel_Test_logNickName},
-	{(struct objc_selector *)"setNickName:", "v24@0:8@16", (void *)_I_SuperModel_Test_setNickName_},
-	{(struct objc_selector *)"nickName", "@16@0:8", (void *)_I_SuperModel_Test_nickName},
-	{(struct objc_selector *)"logObjectInfo", "v16@0:8", (void *)_I_SuperModel_Test_logObjectInfo}}
-};
-
-static struct /*_method_list_t*/ {
-	unsigned int entsize;  // sizeof(struct _objc_method)
-	unsigned int method_count;
-	struct _objc_method method_list[1];
-} _OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	sizeof(_objc_method),
-	1,
-	{{(struct objc_selector *)"logHello", "v16@0:8", (void *)_C_SuperModel_Test_logHello}}
-};
 
 static const char *_OBJC_PROTOCOL_METHOD_TYPES_NSObject [] __attribute__ ((used, section ("__DATA,__objc_const"))) = 
 {
@@ -34482,6 +34403,7 @@ static struct /*_protocol_list_t*/ {
 	&_OBJC_PROTOCOL_NSObject
 };
 
+//实现的协议列表
 static struct /*_method_list_t*/ {
 	unsigned int entsize;  // sizeof(struct _objc_method)
 	unsigned int method_count;
@@ -34507,49 +34429,147 @@ struct _protocol_t _OBJC_PROTOCOL_ObjectDelegate __attribute__ ((used)) = {
 };
 struct _protocol_t *_OBJC_LABEL_PROTOCOL_$_ObjectDelegate = &_OBJC_PROTOCOL_ObjectDelegate;
 
-static struct /*_protocol_list_t*/ {
-	long protocol_count;  // Note, this is 32/64 bit
-	struct _protocol_t *super_protocols[1];
-} _OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	1,
-	&_OBJC_PROTOCOL_ObjectDelegate
+
+
+static struct IMAGE_INFO { unsigned version; unsigned flag; } _OBJC_IMAGE_INFO = { 0, 2 };
+
+static struct _class_t *L_OBJC_LABEL_CLASS_$ [4] __attribute__((used, section ("__DATA, __objc_classlist,regular,no_dead_strip")))= {
+    &OBJC_CLASS_$_ModelHelper,
+    &OBJC_CLASS_$_SuperModel,
+    &OBJC_CLASS_$_Model,
+    &OBJC_CLASS_$_ModelChild,
 };
 
+
+#pragma mark - SuperModel (Test)
+
+// @interface SuperModel (Test)
+<ObjectDelegate>
+// @property (nonatomic ,strong) NSString *nickName;
+// - (void)logNickName;
+// + (void)logHello;
+/* @end */
+
+
+
+// @implementation SuperModel (Test)
+
+//实例方法 - (void)logNickName 的实现函数
+static void _I_SuperModel_Test_logNickName(SuperModel * self, SEL _cmd) {
+    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_15,class_getName(((Class (*)(id, SEL))(void *)objc_msgSend)((id)self, sel_registerName("class"))));
+}
+
+//类方法 + (void)logHello 的实现函数
+static void _C_SuperModel_Test_logHello(Class self, SEL _cmd) {
+    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_16,class_getName(((Class (*)(id, SEL))(void *)objc_msgSend)((id)self, sel_registerName("class"))));
+}
+
+//属性 nickName 的 set 函数
+static void _I_SuperModel_Test_setNickName_(SuperModel * self, SEL _cmd, NSString *nickName) {
+    objc_setAssociatedObject(self, sel_registerName("nickName"), nickName, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+//属性 nickName 的 get 函数
+static NSString * _I_SuperModel_Test_nickName(SuperModel * self, SEL _cmd) {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+//实现协议的函数
+static void _I_SuperModel_Test_logObjectInfo(SuperModel * self, SEL _cmd) {
+    NSLog((NSString *)&__NSConstantStringImpl__var_folders_6___xgbfnx57zz3j5cdqx19dtnm0000gn_T_Model_ff5446_mi_17);
+}
+
+// @end
+
+
+struct _class_t {
+    struct _class_t *isa;
+    struct _class_t *superclass;
+    void *cache;
+    void *vtable;
+    struct _class_ro_t *ro;
+};
+
+struct _category_t {
+    const char *name;
+    struct _class_t *cls;
+    const struct _method_list_t *instance_methods;
+    const struct _method_list_t *class_methods;
+    const struct _protocol_list_t *protocols;
+    const struct _prop_list_t *properties;
+};
+
+//分类的实例方法列表
+static struct /*_method_list_t*/ {
+    unsigned int entsize;  // sizeof(struct _objc_method)
+    unsigned int method_count;
+    struct _objc_method method_list[4];
+} _OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
+    sizeof(_objc_method),
+    4,
+    {{(struct objc_selector *)"logNickName", "v16@0:8", (void *)_I_SuperModel_Test_logNickName},
+        {(struct objc_selector *)"setNickName:", "v24@0:8@16", (void *)_I_SuperModel_Test_setNickName_},
+        {(struct objc_selector *)"nickName", "@16@0:8", (void *)_I_SuperModel_Test_nickName},
+        {(struct objc_selector *)"logObjectInfo", "v16@0:8", (void *)_I_SuperModel_Test_logObjectInfo}}
+};
+
+//分类的类方法列表
+static struct /*_method_list_t*/ {
+    unsigned int entsize;  // sizeof(struct _objc_method)
+    unsigned int method_count;
+    struct _objc_method method_list[1];
+} _OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
+    sizeof(_objc_method),
+    1,
+    {{(struct objc_selector *)"logHello", "v16@0:8", (void *)_C_SuperModel_Test_logHello}}
+};
+
+
+#pragma mark -  分类中方法的实现
+
+//实现的协议列表
+static struct /*_protocol_list_t*/ {
+    long protocol_count;  // Note, this is 32/64 bit
+    struct _protocol_t *super_protocols[1];
+} _OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
+    1,
+    &_OBJC_PROTOCOL_ObjectDelegate
+};
+
+//分类的属性列表
 static struct /*_prop_list_t*/ {
-	unsigned int entsize;  // sizeof(struct _prop_t)
-	unsigned int count_of_properties;
-	struct _prop_t prop_list[1];
+    unsigned int entsize;  // sizeof(struct _prop_t)
+    unsigned int count_of_properties;
+    struct _prop_t prop_list[1];
 } _OBJC_$_PROP_LIST_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	sizeof(_prop_t),
-	1,
-	{{"nickName","T@\"NSString\",&,N"}}
+    sizeof(_prop_t),
+    1,
+    {{"nickName","T@\"NSString\",&,N"}}
 };
 
 extern "C" __declspec(dllexport) struct _class_t OBJC_CLASS_$_SuperModel;
 
-static struct _category_t _OBJC_$_CATEGORY_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = 
+//分类转为结构体：对结构体赋值
+static struct _category_t _OBJC_$_CATEGORY_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) =
 {
-	"SuperModel",
-	0, // &OBJC_CLASS_$_SuperModel,
-	(const struct _method_list_t *)&_OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test,
-	(const struct _method_list_t *)&_OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test,
-	(const struct _protocol_list_t *)&_OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test,
-	(const struct _prop_list_t *)&_OBJC_$_PROP_LIST_SuperModel_$_Test,
+    "SuperModel",
+    0, // &OBJC_CLASS_$_SuperModel,
+    (const struct _method_list_t *)&_OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test,
+    (const struct _method_list_t *)&_OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test,
+    (const struct _protocol_list_t *)&_OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test,
+    (const struct _prop_list_t *)&_OBJC_$_PROP_LIST_SuperModel_$_Test,
 };
 static void OBJC_CATEGORY_SETUP_$_SuperModel_$_Test(void ) {
-	_OBJC_$_CATEGORY_SuperModel_$_Test.cls = &OBJC_CLASS_$_SuperModel;
+    _OBJC_$_CATEGORY_SuperModel_$_Test.cls = &OBJC_CLASS_$_SuperModel;
 }
+
 #pragma section(".objc_inithooks$B", long, read, write)
 __declspec(allocate(".objc_inithooks$B")) static void *OBJC_CATEGORY_SETUP[] = {
-	(void *)&OBJC_CATEGORY_SETUP_$_SuperModel_$_Test,
+    (void *)&OBJC_CATEGORY_SETUP_$_SuperModel_$_Test,
 };
-static struct _class_t *L_OBJC_LABEL_CLASS_$ [4] __attribute__((used, section ("__DATA, __objc_classlist,regular,no_dead_strip")))= {
-	&OBJC_CLASS_$_ModelHelper,
-	&OBJC_CLASS_$_SuperModel,
-	&OBJC_CLASS_$_Model,
-	&OBJC_CLASS_$_ModelChild,
-};
+
 static struct _category_t *L_OBJC_LABEL_CATEGORY_$ [1] __attribute__((used, section ("__DATA, __objc_catlist,regular,no_dead_strip")))= {
-	&_OBJC_$_CATEGORY_SuperModel_$_Test,
+    &_OBJC_$_CATEGORY_SuperModel_$_Test,
 };
-static struct IMAGE_INFO { unsigned version; unsigned flag; } _OBJC_IMAGE_INFO = { 0, 2 };
+
+
