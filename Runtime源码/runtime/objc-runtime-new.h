@@ -1156,6 +1156,7 @@ struct objc_class : objc_object {
 
     IMP getLoadMethod();
 
+    //锁定:为了防止并发实现，按住runtimeLock。
     // Locking: To prevent concurrent realization, hold runtimeLock.
     bool isRealized() {
         return data()->flags & RW_REALIZED;

@@ -27,56 +27,68 @@
 **********************************************************************/
 
 /***********************************************************************
- * Class loading and connecting (GrP 2004-2-11)
+ * 类的加载与连接 (GrP 2004-2-11)
  *
- * When images are loaded (during program startup or otherwise), the 
- * runtime needs to load classes and categories from the images, connect 
- * classes to superclasses and categories to parent classes, and call 
- * +load methods. 
- * 
- * The Objective-C runtime can cope with classes arriving in any order. 
- * That is, a class may be discovered by the runtime before some 
- * superclass is known. To handle out-of-order class loads, the 
- * runtime uses a "pending class" system. 
- * 
+ * 当在程序启动或其他情况下加载 Image 时，runtime 需要从 Image 加载类和类别：将类连接到父类，将 categories 连接到所属的类，并调用+load方法。
+ * Objective-C runtime 可以处理以任何顺序到达的类。也就是说，runtime 可能在知道某个父类之前发现该类。为了处理无序的类加载，运行时使用“pending class”系统。
+ *
  * (Historical note)
- * Panther and earlier: many classes arrived out-of-order because of 
- *   the poorly-ordered callback from dyld. However, the runtime's 
- *   pending mechanism only handled "missing superclass" and not 
- *   "present superclass but missing higher class". See Radar #3225652. 
- * Tiger: The runtime's pending mechanism was augmented to handle 
- *   arbitrary missing classes. In addition, dyld was rewritten and 
- *   now sends the callbacks in strictly bottom-up link order. 
- *   The pending mechanism may now be needed only for rare and 
- *   hard to construct programs.
+ * Panther 和更早的操作系统:由于来自dyld的无序回调，许多类都是无序到达的。然而，runtime 的挂起机制只处理“丢失的父类”，而不处理“当前的父类但丢失了更高的类”。看 Radar# 3225652。
+ * Tiger 系统: 扩展了 runtime 的挂起机制，以处理任意丢失的类。此外，对dyld进行了重写，现在严格按照自下而上的链接顺序发送回调。挂起机制现在可能只在很少且很难构造程序的情况下才需要。
  * (End historical note)
- * 
- * A class when first seen in an image is considered "unconnected". 
- * It is stored in `unconnected_class_hash`. If all of the class's 
- * superclasses exist and are already "connected", then the new class 
- * can be connected to its superclasses and moved to `class_hash` for 
- * normal use. Otherwise, the class waits in `unconnected_class_hash` 
- * until the superclasses finish connecting.
- * 
- * A "connected" class is 
- * (1) in `class_hash`, 
+ *
+ * 第一次在 Image 中出现的类被认为是未关联的。它存储在未关联类的哈希表'unconnected_class_hash'中。如果所有父类都存在并且已经“关联”，那么新类可以关联到它的父类并移动到 class_hash 以正常使用。否则，该类将在 unconnected_class_hash 中等待，直到父类完成关联。
+ * 一个关联类必须满足：在哈希表class_hash中；连接到它的父类，没有未连接的父类，以其他方式初始化并准备使用，如果+load还没有被调用，则可以使用+load。
+ * 一个未关联的类可能是：在未关联的哈希表unconnected_class_hash中；没有连接到它的父类；有一个直接的父类，它要么缺失要么未连接；还没有准备好使用，并且还没有资格进行+load。
+ *
+ * Image 映射目前在几乎所有方面都不是线程安全的。图像映射在几个地方是可重入的:父类查找可能会导致ZeroLink加载另一个Image，而+load调用可能会导致dyld加载另一个Image。
+ *
+ *
+ *
+ * A "connected" class is
+ * (1) 在 `class_hash` 中,
  * (2) connected to its superclasses, 
  * (3) has no unconnected superclasses, 
  * (4) is otherwise initialized and ready for use, and 
- * (5) is eligible for +load if +load has not already been called. 
- * 
- * An "unconnected" class is 
+ * (5) is eligible for +load if +load has not already been called.
+ *
+ * An "unconnected" class is
  * (1) in `unconnected_class_hash`, 
  * (2) not connected to its superclasses, 
  * (3) has an immediate superclass which is either missing or unconnected, 
  * (4) is not ready for use, and 
  * (5) is not yet eligible for +load.
- * 
- * Image mapping is NOT CURRENTLY THREAD-SAFE with respect to just about 
- * anything. Image mapping IS RE-ENTRANT in several places: superclass 
- * lookup may cause ZeroLink to load another image, and +load calls may 
- * cause dyld to load another image.
- * 
+ *
+ *
+ * Image mapping is NOT CURRENTLY THREAD-SAFE with respect to just about  anything. Image mapping IS RE-ENTRANT in several places: superclass  lookup may cause ZeroLink to load another image, and +load calls may  cause dyld to load another image.
+ *
+ * Image映射顺序:
+ * 1、读取所有新Image中的所有类：将它们全部添加到unconnected_class_hash中；
+ *              注意在附加 categories 之前的任何+load实现；附加任何挂起的类别。
+ * 2、读取所有新Image中的所有categories：
+ *  附加所属类存在(连接或不连接)的categories，并附加其余categories。
+ *  标记它们都符合+load条件(如果实现)，即使所属类不存在。
+ * 3、尝试连接所有新Image中的所有类：
+ *       如果找不到父类，则挂起该类；
+ *       如果父类没有连接，尝试递归地连接它；
+ *       如果父类已经连接则 -> 连接该类，标记类符合+load条件(如果实现的话)，修复任何引用该类的挂起类，连接该类的任何pended子类
+ * 4、在所有新Image中解析 SEL 引用和类引用：仍然不存在类的类引用将被挂起。
+ * 5、修复所有新Image中的协议对象。
+ * 6、调用类和 categories 的 +load ：
+ *          可以包括不在这些映像中，但由于这些映像而新符合条件的类或类别。
+ *          因为连接过程的父类优先规则 ，+loads 将父类优先调用。
+ *          Category +load 需要延迟到所属的类连接并调用了它的+load之后。
+ *
+ * 性能: 在读取任何类别之前读取所有类；由于缺少所属的类，需要挂起的类别更少。
+ * 性能: 所有类别都试图在连接任何类之前添加；需要刷新的类缓存更少。(未连接的类及其各自的子类保证是不可消息的，因此它们的缓存将是空的。)
+ * 性能: 在连接任何类之前读取所有类；由于缺少父类，需要挂起的类更少。
+ *
+ * 正确性: 所有选择器和类引用在任何协议修复或+load 方法之前都是固定的。libobjc本身包含选择器和类引用，用于协议的修复和+load。
+ * 正确性: +load 方法按照自下而上的链接顺序调度；这个约束是父类顺序之外的。一些+load实现希望在链接库中使用另一个类，即使这两个类不共享直接的父类关系。
+ * 正确性: 在附加任何类别之前，所有类都要扫描 +load。否则，如果一个category实现了+load，而它的类没有类方法，那么该类的+load扫描将找到这个category的+load方法，然后将调用该方法两次。
+ * 正确性: 挂起的类引用直到类被连接时才被修复。缺少弱父类的类仍然没有连接。缺少弱父类的类引用必须为nil。因此，对未连接类的类引用必须保持不固定。
+ *
+ *
  * Image mapping sequence:
  * 
  * Read all classes in all new images. 
@@ -84,10 +96,8 @@
  *   Note any +load implementations before categories are attached.
  *   Attach any pending categories.
  * Read all categories in all new images. 
- *   Attach categories whose parent class exists (connected or not), 
- *     and pend the rest.
- *   Mark them all eligible for +load (if implemented), even if the 
- *     parent class is missing.
+ *   Attach categories whose parent class exists (connected or not), and pend the rest.
+ *   Mark them all eligible for +load (if implemented), even if the   parent class is missing.
  * Try to connect all classes in all new images. 
  *   If the superclass is missing, pend the class
  *   If the superclass is unconnected, try to recursively connect it
@@ -100,42 +110,26 @@
  *   Class refs whose classes still do not exist are pended.
  * Fix up protocol objects in all new images.
  * Call +load for classes and categories.
- *   May include classes or categories that are not in these images, 
- *     but are newly eligible because of these image.
- *   Class +loads will be called superclass-first because of the 
- *     superclass-first nature of the connecting process.
- *   Category +load needs to be deferred until the parent class is 
- *     connected and has had its +load called.
+ *   May include classes or categories that are not in these images,  but are newly eligible because of these image.
+ *   Class +loads will be called superclass-first because of the  superclass-first nature of the connecting process.
+ *   Category +load needs to be deferred until the parent class is  connected and has had its +load called.
  * 
  * Performance: all classes are read before any categories are read. 
  * Fewer categories need be pended for lack of a parent class.
  * 
- * Performance: all categories are attempted to be attached before 
- * any classes are connected. Fewer class caches need be flushed. 
- * (Unconnected classes and their respective subclasses are guaranteed 
- * to be un-messageable, so their caches will be empty.)
+ * Performance: all categories are attempted to be attached before any classes are connected. Fewer class caches need be flushed.
+ * (Unconnected classes and their respective subclasses are guaranteed  to be un-messageable, so their caches will be empty.)
  * 
  * Performance: all classes are read before any classes are connected. 
  * Fewer classes need be pended for lack of a superclass.
  * 
- * Correctness: all selector and class refs are fixed before any 
- * protocol fixups or +load methods. libobjc itself contains selector 
- * and class refs which are used in protocol fixup and +load.
+ * Correctness: all selector and class refs are fixed before any protocol fixups or +load methods. libobjc itself contains selector and class refs which are used in protocol fixup and +load.
  * 
- * Correctness: +load methods are scheduled in bottom-up link order. 
- * This constraint is in addition to superclass order. Some +load 
- * implementations expect to use another class in a linked-to library, 
- * even if the two classes don't share a direct superclass relationship.
+ * Correctness: +load methods are scheduled in bottom-up link order.  This constraint is in addition to superclass order. Some +load implementations expect to use another class in a linked-to library,  even if the two classes don't share a direct superclass relationship.
  * 
- * Correctness: all classes are scanned for +load before any categories 
- * are attached. Otherwise, if a category implements +load and its class 
- * has no class methods, the class's +load scan would find the category's 
- * +load method, which would then be called twice.
+ * Correctness: all classes are scanned for +load before any categories  are attached. Otherwise, if a category implements +load and its class  has no class methods, the class's +load scan would find the category's  +load method, which would then be called twice.
  *
- * Correctness: pended class refs are not fixed up until the class is 
- * connected. Classes with missing weak superclasses remain unconnected. 
- * Class refs to classes with missing weak superclasses must be nil. 
- * Therefore class refs to unconnected classes must remain un-fixed.
+ * Correctness: pended class refs are not fixed up until the class is  connected. Classes with missing weak superclasses remain unconnected.  Class refs to classes with missing weak superclasses must be nil. Therefore class refs to unconnected classes must remain un-fixed.
  * 
  **********************************************************************/
 
@@ -609,10 +603,9 @@ Protocol *objc_getProtocol(const char *name)
 
 /***********************************************************************
 * look_up_class
-* Map a class name to a class using various methods.
-* This is the common implementation of objc_lookUpClass and objc_getClass, 
-* and is also used internally to get additional search options.
-* Sequence:
+* 使用不同的方法将类名映射到类。
+* 这是objc_lookUpClass() 和 objc_getClass() 的常见实现，在内部也用于获取其他搜索选项。
+* 顺序:
 * 1. class_hash
 * 2. unconnected_class_hash (optional)
 * 3. classLoader callback
@@ -621,16 +614,16 @@ Protocol *objc_getProtocol(const char *name)
 Class look_up_class(const char *aClassName, bool includeUnconnected, 
                     bool includeClassHandler)
 {
-    bool includeClassLoader = YES; // class loader cannot be skipped
-    Class result = nil;
-    struct objc_class query;
+    bool includeClassLoader = YES; // 不能跳过 class 加载器
+    Class result = nil;//要映射的结果
+    struct objc_class query;//类结构
 
-    query.name = aClassName;
+    query.name = aClassName;//类的名称
 
  retry:
 
     if (!result  &&  class_hash) {
-        // Check ordinary classes
+        // 检查普通类
         mutex_locker_t lock(classLock);
         result = (Class)NXHashGet(class_hash, &query);
     }

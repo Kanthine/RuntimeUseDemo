@@ -1842,22 +1842,20 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
 
 
 /***********************************************************************
-* realizeClass
-* Performs first-time initialization on class cls, 
-* including allocating its read-write data.
-* Returns the real class structure for the class. 
+* 实现一个类
+* 对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
 * Locking: runtimeLock must be write-locked by the caller
 **********************************************************************/
 static Class realizeClass(Class cls)
 {
     runtimeLock.assertWriting();
-
+    
     const class_ro_t *ro;
     class_rw_t *rw;
     Class supercls;
     Class metacls;
     bool isMeta;
-
+    
     if (!cls) return nil;
     if (cls->isRealized()) return cls;
     assert(cls == remapClass(cls));
@@ -5663,27 +5661,27 @@ class_replaceProperty(Class cls, const char *name,
 
 
 /***********************************************************************
-* look_up_class
-* Look up a class by name, and realize it.
-* Locking: acquires runtimeLock
+* 按名称查找类，并实现它。
+* 锁定:获得runtimeLock
+* @param __attribute__((unused) 表示该函数或变量可能不使用，这个属性可以避免编译器产生警告信息
 **********************************************************************/
-Class 
-look_up_class(const char *name, 
+Class look_up_class(const char *name,
               bool includeUnconnected __attribute__((unused)), 
               bool includeClassHandler __attribute__((unused)))
 {
     if (!name) return nil;
 
     Class result;
-    bool unrealized;
+    bool unrealized;//未实现的
     {
-        rwlock_reader_t lock(runtimeLock);
-        result = getClass(name);
+        rwlock_reader_t lock(runtimeLock);//上锁
+        result = getClass(name);//获取类
+        //isRealized() 已实现
         unrealized = result  &&  !result->isRealized();
     }
-    if (unrealized) {
+    if (unrealized) {//如果获取该类但是该类没有实现
         rwlock_writer_t lock(runtimeLock);
-        realizeClass(result);
+        realizeClass(result);// 实现一个类：对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
     }
     return result;
 }
