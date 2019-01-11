@@ -58,6 +58,9 @@
         [FatherModel getRequiredClassWithName:@"SonModel_"];
     }else if ([title isEqualToString:@"objc_getClassList"]){
         [FatherModel getClassList];
+    }else if ([title isEqualToString:@"objc_getMetaClass"]){
+        [FatherModel getMetaClassWithName:@"SonModel"];
+        [FatherModel getMetaClassWithName:@"SonModel_"];
     }else if ([title isEqualToString:@"objc_copyClassList"]){
         [FatherModel getAllRegisterClass];
     }else if ([title isEqualToString:@"获取指定数量的已注册类"]){
@@ -84,7 +87,7 @@
     if (_daraArray == nil) {
         _daraArray = [NSMutableArray array];
         [_daraArray addObject:@[@"objc_getClass",@"objc_lookUpClass",
-                                @"objc_getRequiredClass",
+                                @"objc_getRequiredClass",@"objc_getMetaClass",
                                 @"objc_getClassList",@"objc_copyClassList",
                                 @"获取指定数量的已注册类",@"获取指定类的所有子类"]];
         [_daraArray addObject:@[@"class_getInstanceVariable",

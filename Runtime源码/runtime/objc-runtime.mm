@@ -96,25 +96,22 @@ int HeaderCount = 0;
 
 
 /***********************************************************************
-* objc_getClass.  Return the id of the named class.  If the class does
-* not exist, call _objc_classLoader and then objc_classHandler, either of 
-* which may create a new class.
-* Warning: doesn't work if aClassName is the name of a posed-for class's isa!
+* 根据指定名称返回一个类。
+* 如果该类不存在,调用 _objc_classLoader() 函数，然后调用objc_classHandler() 函数，两者都可以创建一个新类。
+* Warning: 如果aClassName是为类的 isa 设置的名称，则无法执行!
 **********************************************************************/
 Class objc_getClass(const char *aClassName)
 {
     if (!aClassName) return Nil;
-
     // NO unconnected, YES class handler
     return look_up_class(aClassName, NO, YES);
 }
 
-
 /***********************************************************************
-* objc_getRequiredClass.  
-* Same as objc_getClass, but kills the process if the class is not found. 
-* This is used by ZeroLink, where failing to find a class would be a 
-* compile-time link error without ZeroLink.
+* 功能基于 objc_getClass() 函数,
+* 该函数内部首先调用 objc_getClass() 函数获取返回值，然后判断返回值是否为空
+* 如果返回值为空，则杀死该程序；
+* 这是由ZeroLink使用的，在没有ZeroLink的情况下，无法找到类将是编译时链接错误。
 **********************************************************************/
 Class objc_getRequiredClass(const char *aClassName)
 {
@@ -125,10 +122,8 @@ Class objc_getRequiredClass(const char *aClassName)
 
 
 /***********************************************************************
-* objc_lookUpClass.  Return the id of the named class.
-* If the class does not exist, call _objc_classLoader, which may create 
-* a new class.
-*
+* 根据指定名称返回一个类。
+* 如果该类不存在, 调用_objc_classLoader() 函数，它可以创建一个新类。
 * Formerly objc_getClassWithoutWarning ()
 **********************************************************************/
 Class objc_lookUpClass(const char *aClassName)
@@ -141,8 +136,9 @@ Class objc_lookUpClass(const char *aClassName)
 
 
 /***********************************************************************
-* objc_getMetaClass.  Return the id of the meta class the named class.
-* Warning: doesn't work if aClassName is the name of a posed-for class's isa!
+* 根据指定名称返回一个类的元类。
+* 如果指定名称的类不存在，则返回 nil 并且打印日志 objc[3966]: class `aClassName' not linked into application
+* Warning: 如果aClassName是为类的 isa 设置的名称，则无法执行!
 **********************************************************************/
 Class objc_getMetaClass(const char *aClassName)
 {

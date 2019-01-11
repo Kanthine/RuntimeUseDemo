@@ -12,9 +12,36 @@
 
 #pragma mark - 根据类名称获取指定的类
 
-/* objc_getClass() 函数、objc_getRequiredClass() 函数与 objc_lookUpClass() 函数区别：
- *
+/* 获取指定名称的类：
+ * @param name 要查找的类的名称。
+ * @return 返回指定名称的类；
+ * @note 如果类没有在Objective-C运行时注册，则返回 nil。
+ * @note 如果该类不存在,调用 _objc_classLoader() 函数，然后调用objc_classHandler() 函数，两者都可以创建一个新类。
+ * @note objc_getClass() 与objc_lookUpClass() 的不同之处在于，如果类没有注册，objc_getClass() 将调用类处理程序回调，然后再次检查类是否注册。objc_lookUpClass() 不调用类处理程序回调。
+ * @Warning: 如果aClassName是为类的 isa 设置的名称，则无法执行!
  */
+Class _Nullable objc_getClass(const char * _Nonnull name);
+
+/* 获取指定名称的类：
+ * @note 该函数功能基于 objc_getClass() 函数，内部首先调用 objc_getClass() 函数获取返回值；
+ *       然后判断返回值是否为空，如果返回值为空，则终止进程；
+ * @note 此函数由 ZeroLink 使用，如果没有 ZeroLink，则无法找到类将是编译时链接错误。
+ */
+Class _Nonnull objc_getRequiredClass(const char * _Nonnull name);
+
+/* 获取指定名称的类
+ * @note 如果类没有在Objective-C运行时注册，则返回 nil。
+ *       如果该类不存在, 调用_objc_classLoader() 函数，它可以创建一个新类。
+ * @note objc_getClass() 与这个函数的不同之处在于，如果类没有注册，objc_getClass() 将调用类处理程序回调函数，然后第二次检查类是否注册。这个函数不调用类处理程序回调。
+ */
+Class _Nullable objc_lookUpClass(const char * _Nonnull name);
+
+/* 获取指定名称的类的元类
+ * @note 如果指定名称的类不存在，则返回 nil 并且打印日志 objc[3966]: class `aClassName' not linked into application
+ * @note 如果命名类的定义未注册，则此函数调用类处理程序回调，然后再次检查类是否注册。但是，每个类定义都必须有一个有效的元类定义，因此无论元类定义是否有效，它总是返回。
+ */
+Class _Nullable objc_getMetaClass(const char * _Nonnull name);
+
 + (void)getClassWithName:(NSString *)name{
     Class theClass = objc_getClass(name.UTF8String);
     NSLog(@"类名是 %s",class_getName(theClass));
@@ -25,6 +52,7 @@
     NSLog(@"类名是 %s",class_getName(theMetaClass));
 }
 
+//运行时异常：objc[3652]: link error: class 'SonModel_' not found.
 + (void)getRequiredClassWithName:(NSString *)name{
     Class theMetaClass = objc_getRequiredClass(name.UTF8String);
     NSLog(@"类名是 %s",class_getName(theMetaClass));
@@ -35,10 +63,7 @@
     NSLog(@"类名是 %s",class_getName(theMetaClass));
 }
 
-/* objc_copyClassList() 函数与 objc_getClassList() 区别：
- * objc_copyClassList() 函数只能获取所有已注册的类
- * objc_getClassList() 函数可以获取指定数量的任意集合类
- */
+
 //获取所有注册类
 + (void)getAllRegisterClass{
     unsigned int outCount = 0;

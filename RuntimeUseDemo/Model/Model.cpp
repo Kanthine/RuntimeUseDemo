@@ -33984,20 +33984,6 @@ struct _objc_method {
 	void  *_imp;
 };
 
-struct _protocol_t {
-	void * isa;  // NULL
-	const char *protocol_name;
-	const struct _protocol_list_t * protocol_list; // super protocols
-	const struct method_list_t *instance_methods;
-	const struct method_list_t *class_methods;
-	const struct method_list_t *optionalInstanceMethods;
-	const struct method_list_t *optionalClassMethods;
-	const struct _prop_list_t * properties;
-	const unsigned int size;  // sizeof(struct _protocol_t)
-	const unsigned int flags;  // = 0
-	const char ** extendedMethodTypes;
-};
-
 struct _ivar_t {
 	unsigned long int *offset;  // pointer to ivar offset location
 	const char *name;
@@ -34375,60 +34361,6 @@ static struct /*_prop_list_t*/ {
 	{"debugDescription","T@\"NSString\",R,C"}}
 };
 
-struct _protocol_t _OBJC_PROTOCOL_NSObject __attribute__ ((used)) = {
-	0,
-	"NSObject",
-	0,
-	(const struct method_list_t *)&_OBJC_PROTOCOL_INSTANCE_METHODS_NSObject,
-	0,
-	(const struct method_list_t *)&_OBJC_PROTOCOL_OPT_INSTANCE_METHODS_NSObject,
-	0,
-	(const struct _prop_list_t *)&_OBJC_PROTOCOL_PROPERTIES_NSObject,
-	sizeof(_protocol_t),
-	0,
-	(const char **)&_OBJC_PROTOCOL_METHOD_TYPES_NSObject
-};
-struct _protocol_t *_OBJC_LABEL_PROTOCOL_$_NSObject = &_OBJC_PROTOCOL_NSObject;
-
-static const char *_OBJC_PROTOCOL_METHOD_TYPES_ObjectDelegate [] __attribute__ ((used, section ("__DATA,__objc_const"))) = 
-{
-	"v16@0:8"
-};
-
-static struct /*_protocol_list_t*/ {
-	long protocol_count;  // Note, this is 32/64 bit
-	struct _protocol_t *super_protocols[1];
-} _OBJC_PROTOCOL_REFS_ObjectDelegate __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	1,
-	&_OBJC_PROTOCOL_NSObject
-};
-
-//实现的协议列表
-static struct /*_method_list_t*/ {
-	unsigned int entsize;  // sizeof(struct _objc_method)
-	unsigned int method_count;
-	struct _objc_method method_list[1];
-} _OBJC_PROTOCOL_INSTANCE_METHODS_ObjectDelegate __attribute__ ((used, section ("__DATA,__objc_const"))) = {
-	sizeof(_objc_method),
-	1,
-	{{(struct objc_selector *)"logObjectInfo", "v16@0:8", 0}}
-};
-
-struct _protocol_t _OBJC_PROTOCOL_ObjectDelegate __attribute__ ((used)) = {
-	0,
-	"ObjectDelegate",
-	(const struct _protocol_list_t *)&_OBJC_PROTOCOL_REFS_ObjectDelegate,
-	(const struct method_list_t *)&_OBJC_PROTOCOL_INSTANCE_METHODS_ObjectDelegate,
-	0,
-	0,
-	0,
-	0,
-	sizeof(_protocol_t),
-	0,
-	(const char **)&_OBJC_PROTOCOL_METHOD_TYPES_ObjectDelegate
-};
-struct _protocol_t *_OBJC_LABEL_PROTOCOL_$_ObjectDelegate = &_OBJC_PROTOCOL_ObjectDelegate;
-
 
 
 static struct IMAGE_INFO { unsigned version; unsigned flag; } _OBJC_IMAGE_INFO = { 0, 2 };
@@ -34481,24 +34413,6 @@ static void _I_SuperModel_Test_logObjectInfo(SuperModel * self, SEL _cmd) {
 
 // @end
 
-
-struct _class_t {
-    struct _class_t *isa;
-    struct _class_t *superclass;
-    void *cache;
-    void *vtable;
-    struct _class_ro_t *ro;
-};
-
-struct _category_t {
-    const char *name;
-    struct _class_t *cls;
-    const struct _method_list_t *instance_methods;
-    const struct _method_list_t *class_methods;
-    const struct _protocol_list_t *protocols;
-    const struct _prop_list_t *properties;
-};
-
 //分类的实例方法列表
 static struct /*_method_list_t*/ {
     unsigned int entsize;  // sizeof(struct _objc_method)
@@ -34525,16 +34439,90 @@ static struct /*_method_list_t*/ {
 };
 
 
-#pragma mark -  分类中方法的实现
+#pragma mark -  分类中协议的实现
 
-//实现的协议列表
+//实现的 ObjectDelegate 协议的方法列表
+static struct{
+    unsigned int entsize;  // sizeof(struct _objc_method)
+    unsigned int method_count;//实现的方法数量
+    struct _objc_method method_list[1];//实现的方法列表
+} _OBJC_PROTOCOL_INSTANCE_METHODS_ObjectDelegate __attribute__ ((used, section ("__DATA,__objc_const"))) = {
+    sizeof(_objc_method),
+    1,
+    {{(struct objc_selector *)"logObjectInfo", "v16@0:8", 0}}
+};
+
+//表示协议的结构体 _protocol_t
+struct _protocol_t {
+    void * isa;  // NULL
+    const char *protocol_name;//协议名称
+    const struct _protocol_list_t * protocol_list; //遵循的父协议
+    const struct method_list_t *instance_methods;//必须实现的实例方法列表
+    const struct method_list_t *class_methods;//必须实现的类方法列表
+    const struct method_list_t *optionalInstanceMethods;//可选的实例方法列表
+    const struct method_list_t *optionalClassMethods;//可选的类方法列表
+    const struct _prop_list_t * properties;//属性列表
+    const unsigned int size;  // 该结构体实例的内存大小
+    const unsigned int flags;  // = 0
+    const char ** extendedMethodTypes;
+};
+
+static struct /*_protocol_list_t*/ {
+    long protocol_count;  // Note, this is 32/64 bit
+    struct _protocol_t *super_protocols[1];
+} _OBJC_PROTOCOL_REFS_ObjectDelegate __attribute__ ((used, section ("__DATA,__objc_const"))) = {
+    1,
+    &_OBJC_PROTOCOL_NSObject//根协议的结构指针地址
+};
+
+struct _protocol_t _OBJC_PROTOCOL_NSObject __attribute__ ((used)) = {
+    0,
+    "NSObject",
+    0,
+    (const struct method_list_t *)&_OBJC_PROTOCOL_INSTANCE_METHODS_NSObject,
+    0,
+    (const struct method_list_t *)&_OBJC_PROTOCOL_OPT_INSTANCE_METHODS_NSObject,
+    0,
+    (const struct _prop_list_t *)&_OBJC_PROTOCOL_PROPERTIES_NSObject,
+    sizeof(_protocol_t),
+    0,
+    (const char **)&_OBJC_PROTOCOL_METHOD_TYPES_NSObject
+};
+struct _protocol_t *_OBJC_LABEL_PROTOCOL_$_NSObject = &_OBJC_PROTOCOL_NSObject;
+
+//方法类型列表
+static const char *_OBJC_PROTOCOL_METHOD_TYPES_ObjectDelegate [] __attribute__ ((used, section ("__DATA,__objc_const"))) ={
+    "v16@0:8"
+};
+
+//ObjectDelegate 协议的结构体实例
+struct _protocol_t _OBJC_PROTOCOL_ObjectDelegate __attribute__ ((used)) = {
+    0,
+    "ObjectDelegate",//协议名称
+    (const struct _protocol_list_t *)&_OBJC_PROTOCOL_REFS_ObjectDelegate,//遵循的父协议
+    (const struct method_list_t *)&_OBJC_PROTOCOL_INSTANCE_METHODS_ObjectDelegate,//必须实现的实例方法列表
+    0,//必须实现的类方法列表
+    0,//可选的实例方法列表
+    0,//可选的类方法列表
+    0,//属性列表
+    sizeof(_protocol_t),// 该结构体实例的内存大小
+    0,
+    (const char **)&_OBJC_PROTOCOL_METHOD_TYPES_ObjectDelegate
+};
+struct _protocol_t *_OBJC_LABEL_PROTOCOL_$_ObjectDelegate = &_OBJC_PROTOCOL_ObjectDelegate;
+
+/* 实现的协议列表。
+ * 注意：不是实现的协议方法列表
+ */
 static struct /*_protocol_list_t*/ {
     long protocol_count;  // Note, this is 32/64 bit
     struct _protocol_t *super_protocols[1];
 } _OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
     1,
-    &_OBJC_PROTOCOL_ObjectDelegate
+    &_OBJC_PROTOCOL_ObjectDelegate//实现的 ObjectDelegate 协议
 };
+
+#pragma mark -  分类中方法的实现
 
 //分类的属性列表
 static struct /*_prop_list_t*/ {
@@ -34549,15 +34537,31 @@ static struct /*_prop_list_t*/ {
 
 extern "C" __declspec(dllexport) struct _class_t OBJC_CLASS_$_SuperModel;
 
+struct _class_t {
+    struct _class_t *isa;
+    struct _class_t *superclass;
+    void *cache;
+    void *vtable;
+    struct _class_ro_t *ro;
+};
+
+struct _category_t {
+    const char *name;//所属的类的名称
+    struct _class_t *cls;
+    const struct _method_list_t *instance_methods;//实例方法列表
+    const struct _method_list_t *class_methods;//类方法列表
+    const struct _protocol_list_t *protocols;//实现的协议列表
+    const struct _prop_list_t *properties;//属性列表
+};
+
 //分类转为结构体：对结构体赋值
-static struct _category_t _OBJC_$_CATEGORY_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) =
-{
+static struct _category_t _OBJC_$_CATEGORY_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) ={
     "SuperModel",
     0, // &OBJC_CLASS_$_SuperModel,
-    (const struct _method_list_t *)&_OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test,
-    (const struct _method_list_t *)&_OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test,
-    (const struct _protocol_list_t *)&_OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test,
-    (const struct _prop_list_t *)&_OBJC_$_PROP_LIST_SuperModel_$_Test,
+    (const struct _method_list_t *)&_OBJC_$_CATEGORY_INSTANCE_METHODS_SuperModel_$_Test,//实例方法列表
+    (const struct _method_list_t *)&_OBJC_$_CATEGORY_CLASS_METHODS_SuperModel_$_Test,//类方法列表
+    (const struct _protocol_list_t *)&_OBJC_CATEGORY_PROTOCOLS_$_SuperModel_$_Test,//实现的协议列表
+    (const struct _prop_list_t *)&_OBJC_$_PROP_LIST_SuperModel_$_Test,//属性列表
 };
 static void OBJC_CATEGORY_SETUP_$_SuperModel_$_Test(void ) {
     _OBJC_$_CATEGORY_SuperModel_$_Test.cls = &OBJC_CLASS_$_SuperModel;
