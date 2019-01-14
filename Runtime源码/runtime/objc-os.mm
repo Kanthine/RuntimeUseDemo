@@ -584,9 +584,9 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
     uint32_t hCount;
     size_t selrefCount = 0;
 
-    // Perform first-time initialization if necessary.
-    // This function is called before ordinary library initializers. 
-    // fixme defer initialization until an objc-using image is found?
+    // 如果需要，执行首次初始化。
+    // 在普通库初始化器之前调用此函数。
+    // fixme 延迟初始化，直到找到一个使用 objc 的镜像?
     if (firstTime) {
         preopt_init();
 #if SUPPORT_GC
@@ -600,8 +600,7 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
         _objc_inform("IMAGES: processing %u newly-mapped images...\n", infoCount);
     }
 
-
-    // Find all images with Objective-C metadata.
+    // 查找带有Objective-C元数据的所有镜像。
     hCount = 0;
     i = infoCount;
     while (i--) {
@@ -609,12 +608,12 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
 
         hi = addHeader(mhdr);
         if (!hi) {
-            // no objc data in this entry
+            // 此条目中没有objc数据
             continue;
         }
 
         if (mhdr->filetype == MH_EXECUTE) {
-            // Size some data structures based on main executable's size
+            // 根据主可执行文件的大小调整一些数据结构的大小
 #if __OBJC2__
             size_t count;
             _getObjc2SelectorRefs(hi, &count);
@@ -639,26 +638,20 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
         }
     }
 
-    // Perform one-time runtime initialization that must be deferred until 
-    // the executable itself is found. This needs to be done before 
-    // further initialization.
-    // (The executable may not be present in this infoList if the 
-    // executable does not contain Objective-C code but Objective-C 
-    // is dynamically loaded later. In that case, check_wants_gc() 
-    // will do the right thing.)
+    // 执行一次性的运行时初始化，必须延迟到找到可执行文件本身。这需要在进一步初始化之前完成。(如果可执行文件不包含Objective-C代码，但Objective-C稍后会动态加载，则可执行文件可能不在此信息列表中。)在这种情况下，check_wants_gc()将执行正确的操作。
 #if SUPPORT_GC
     if (firstTime) {
         check_wants_gc(&wantsGC);
 
         verify_gc_readiness(wantsGC, hList, hCount);
         
-        gc_init(wantsGC);  // needs executable for GC decision
+        gc_init(wantsGC);  // GC决策需要可执行文件
     } else {
         verify_gc_readiness(wantsGC, hList, hCount);
     }
 
     if (wantsGC) {
-        // tell the collector about the data segment ranges.
+        // 告知收集器数据段的范围。
         for (i = 0; i < hCount; ++i) {
             uint8_t *seg;
             unsigned long seg_size;
@@ -675,8 +668,7 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
 
             seg = getsegmentdata(hi->mhdr, "__OBJC", &seg_size);
             if (seg) gc_register_datasegment((uintptr_t)seg, seg_size);
-            // __OBJC contains no GC data, but pointers to it are 
-            // used as associated reference values (rdar://6953570)
+            // __OBJC 不包含 GC 数据，但是指向它的指针被用作关联的参考值(rdar://6953570)
         }
     }
 #endif
@@ -686,6 +678,7 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
         arr_init();
     }
 
+    // 从 headerList 开始对链表中的头文件执行初始处理。
     _read_images(hList, hCount);
 
     firstTime = NO;
@@ -784,9 +777,8 @@ unmap_image_nolock(const struct mach_header *mh)
 
 /***********************************************************************
 * static_init
-* Run C++ static constructor functions.
-* libc calls _objc_init() before dyld would call our static constructors, 
-* so we have to do it ourselves.
+* 运行 C++ 静态构造函数。
+* 在 dyld 调用静态构造函数之前，libc 调用_objc_init()，所以我们必须自己执行。
 **********************************************************************/
 static void static_init()
 {
@@ -801,10 +793,10 @@ static void static_init()
 
 
 /***********************************************************************
-* _objc_init
-* Bootstrap initialization. Registers our image notifier with dyld.
-* Old ABI: called by dyld as a library initializer
-* New ABI: called by libSystem BEFORE library initialization time
+* 对于OC运行时，入口方法为 _objc_init
+* 引导程序初始化：使用 dyld 注册我们的 Image 通知程序。
+* Old ABI: dyld 作为库初始化器调用它
+* New ABI: 在库初始化之前由 libSystem 调用
 **********************************************************************/
 
 #if !__OBJC2__
@@ -812,18 +804,18 @@ static __attribute__((constructor))
 #endif
 void _objc_init(void)
 {
-    static bool initialized = false;
-    if (initialized) return;
+    static bool initialized = false;//是否初始化的静态变量
+    if (initialized) return;//如果已初始化，则返回
     initialized = true;
     
-    // fixme defer initialization until an objc-using image is found?
-    environ_init();
+    // fixme 延迟初始化，直到找到一个使用对象的 Image ?
+    environ_init();//环境初始化,读取影响运行时的环境变量; 如果需要，还可以打印环境变量帮助。
     tls_init();
-    static_init();
-    lock_init();
-    exception_init();
-        
-    // Register for unmap first, in case some +load unmaps something
+    static_init();//运行 C++ 静态构造函数
+    lock_init();// 锁的初始化
+    exception_init();//初始化 libobjc 的异常处理系统
+    
+    // 首先注册unmap，以防某些 +load 取消映射
     _dyld_register_func_for_remove_image(&unmap_image);
     dyld_register_image_state_change_handler(dyld_image_state_bound,
                                              1/*batch*/, &map_2_images);

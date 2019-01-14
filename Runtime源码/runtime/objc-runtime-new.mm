@@ -2137,9 +2137,7 @@ void _objc_flush_caches(Class cls)
 
 /***********************************************************************
 * map_images
-* Process the given images which are being mapped in by dyld.
-* Calls ABI-agnostic code after taking ABI-specific locks.
-*
+* 处理由dyld映射指定的镜像；在获取ABI特定的锁之后调用ABI不可知的代码。
 * Locking: write-locks runtimeLock
 **********************************************************************/
 const char *
@@ -2552,7 +2550,7 @@ void _read_images(header_info **hList, uint32_t hCount){
     ts.log("IMAGE TIMES: fix up selector references");
 
 #if SUPPORT_FIXUP
-    // Fix up old objc_msgSend_fixup call sites
+    // 修复旧的objc_msgSend_fixup调用站点
     for (EACH_HEADER) {
         message_ref_t *refs = _getObjc2MessageRefs(hi, &count);
         if (count == 0) continue;
@@ -2568,8 +2566,7 @@ void _read_images(header_info **hList, uint32_t hCount){
 
     ts.log("IMAGE TIMES: fix up objc_msgSend_fixup");
 #endif
-
-    // Discover protocols. Fix up protocol refs.
+    // 发现协议。修复协议声明。
     for (EACH_HEADER) {
         extern objc_class OBJC_CLASS_$_Protocol;
         Class cls = (Class)&OBJC_CLASS_$_Protocol;

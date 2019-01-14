@@ -242,29 +242,22 @@ void objc_dump_class_hash(void)
 
 
 /***********************************************************************
-* _objc_init_class_hash.  Return the class lookup table, create it if
-* necessary.
+* _objc_init_class_hash.
+* 初始化哈希表（类查找表），必要时创建它。
 **********************************************************************/
 void _objc_init_class_hash(void)
 {
-    // Do nothing if class hash table already exists
+    // 如果类哈希表已经存在，什么也不做.
     if (class_hash)
         return;
-
-    // class_hash starts small, with only enough capacity for libobjc itself. 
-    // If a second library is found by map_images(), class_hash is immediately 
-    // resized to capacity 1024 to cut down on rehashes. 
-    // Old numbers: A smallish Foundation+AppKit program will have
-    // about 520 classes.  Larger apps (like IB or WOB) have more like
-    // 800 classes.  Some customers have massive quantities of classes.
-    // Foundation-only programs aren't likely to notice the ~6K loss.
+    // class_hash开始很小，只有libobjc本身的容量。如果map_images()找到第二个库，class_hash将立即调整为1024的容量，以减少重新散列 。旧数据:一个小型的 Foundation+AppKit 程序将有520个类。较大的应用程序(如IB或WOB)有大约800个类。一些客户有大量的类。只有foundation的程序不太可能注意到~6K的损失。
     class_hash = NXCreateHashTable(classHashPrototype, 16, nil);
     _objc_debug_class_hash = class_hash;
 }
 
 
 /***********************************************************************
-* objc_getClassList.  Return the known classes.
+* objc_getClassList.  获取所有已知的类。
 **********************************************************************/
 int objc_getClassList(Class *buffer, int bufferLen) 
 {
@@ -291,7 +284,7 @@ int objc_getClassList(Class *buffer, int bufferLen)
 
 
 /***********************************************************************
-* objc_copyClassList
+* objc_copyClassList 获取所有已知的类。
 * Returns pointers to all classes.
 * This requires all classes be realized, which is regretfully non-lazy.
 * 
@@ -2245,8 +2238,8 @@ load_images(enum dyld_image_states state, uint32_t infoCount,
 
 
 /***********************************************************************
-* _read_images
-* Perform metadata processing for hCount images starting with firstNewHeader
+* _read_images 读取镜像
+* 从 firstNewHeader 开始对 hCount 镜像执行元数据处理
 **********************************************************************/
 void _read_images(header_info **hList, uint32_t hCount)
 {
@@ -2255,16 +2248,15 @@ void _read_images(header_info **hList, uint32_t hCount)
 
     if (!class_hash) _objc_init_class_hash();
 
-    // Parts of this order are important for correctness or performance.
+    // 这个顺序的某些部分对于正确性或性能非常重要。
 
-    // Read classes from all images.
+    // 从所有镜像中读取类。
     for (i = 0; i < hCount; i++) {
         _objc_read_classes_from_image(hList[i]);
     }
 
-    // Read categories from all images. 
-    // But not if any other threads are running - they might
-    // call a category method before the fixups below are complete.
+    // 从所有镜像中读取类别。
+    // 但如果有其他线程正在运行，则不会——它们可能会在下面的修复完成之前调用category方法。
      if (!_is_threaded()) {
         bool needFlush = NO;
         for (i = 0; i < hCount; i++) {
@@ -2274,21 +2266,19 @@ void _read_images(header_info **hList, uint32_t hCount)
         categoriesLoaded = YES;
     }
 
-    // Connect classes from all images.
+    // 连接所有镜像中的类。
     for (i = 0; i < hCount; i++) {
         _objc_connect_classes_from_image(hList[i]);
     }
 
-    // Fix up class refs, selector refs, and protocol objects from all images.
+    // 修复所有镜像中的类引用、选择器引用和协议对象。
     for (i = 0; i < hCount; i++) {
         _objc_map_class_refs_for_image(hList[i]);
         _objc_fixup_selector_refs(hList[i]);
         _objc_fixup_protocol_objects_for_image(hList[i]);
     }
 
-    // Read categories from all images. 
-    // But not if this is the only thread - it's more 
-    // efficient to attach categories earlier if safe.
+    // 从所有图像中读取类别。但是，如果这是唯一的线程，那么如果安全的话，更早地附加类别会更有效。
     if (!categoriesLoaded) {
         bool needFlush = NO;
         for (i = 0; i < hCount; i++) {
@@ -2297,7 +2287,7 @@ void _read_images(header_info **hList, uint32_t hCount)
         if (needFlush) flush_marked_caches();
     }
 
-    // Multi-threaded category load MUST BE LAST to avoid a race.
+    // 多线程类别负载必须放在最后，以避免竞争。
 }
 
 

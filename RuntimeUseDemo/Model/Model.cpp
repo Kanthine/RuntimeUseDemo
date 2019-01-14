@@ -34546,12 +34546,12 @@ struct _class_t {
 };
 
 struct _category_t {
-    const char *name;//所属的类的名称
-    struct _class_t *cls;
-    const struct _method_list_t *instance_methods;//实例方法列表
-    const struct _method_list_t *class_methods;//类方法列表
-    const struct _protocol_list_t *protocols;//实现的协议列表
-    const struct _prop_list_t *properties;//属性列表
+    const char *name;//分类所属的类的名称
+    struct _class_t *cls;//分类所属的类
+    const struct _method_list_t *instance_methods;//分类里添加的实例方法列表
+    const struct _method_list_t *class_methods;//分类添加的类方法列表
+    const struct _protocol_list_t *protocols;//分类实现的协议列表
+    const struct _prop_list_t *properties;//分类添加的属性列表
 };
 
 //分类转为结构体：对结构体赋值

@@ -191,7 +191,6 @@ void drinkingMethodIMP(id self ,SEL _cmd){
     return objc_getAssociatedObject(self, _cmd);
 }
 
-
 #pragma mark - ObjectDelegate
 
 - (void)logObjectInfo{

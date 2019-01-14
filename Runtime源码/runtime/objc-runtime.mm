@@ -213,24 +213,22 @@ void removeHeader(header_info *hi)
 
 
 /***********************************************************************
-* environ_init
-* Read environment variables that affect the runtime.
-* Also print environment variable help, if requested.
+* environ_init 环境初始化
+* 读取影响运行时的环境变量。
+* 如果需要，还可以打印环境变量帮助。
 **********************************************************************/
 void environ_init(void) 
 {
     if (issetugid()) {
-        // All environment variables are silently ignored when setuid or setgid
-        // This includes OBJC_HELP and OBJC_PRINT_OPTIONS themselves.
+        //当 setuid 或 setgid 时，将以静默方式忽略所有环境变量: 这包括 OBJC_HELP 和 OBJC_PRINT_OPTIONS 本身。
         return;
     } 
 
     bool PrintHelp = false;
     bool PrintOptions = false;
     bool maybeMallocDebugging = false;
-
-    // Scan environ[] directly instead of calling getenv() a lot.
-    // This optimizes the case where none are set.
+    
+    //直接扫描 environ[]，而不是调用 getenv() ;这优化了没有设置环境的情况。
     for (char **p = *_NSGetEnviron(); *p != nil; p++) {
         if (0 == strncmp(*p, "Malloc", 6)  ||  0 == strncmp(*p, "DYLD", 4)  ||  
             0 == strncmp(*p, "NSZombiesEnabled", 16))
@@ -264,9 +262,7 @@ void environ_init(void)
         }            
     }
 
-    // Special case: enable some autorelease pool debugging 
-    // when some malloc debugging is enabled 
-    // and OBJC_DEBUG_POOL_ALLOCATION is not set to something other than NO.
+    // 特殊情况:当启用了一些 malloc() 调试并且OBJC_DEBUG_POOL_ALLOCATION没有设置为NO时，启用一些自动释放池调试。
     if (maybeMallocDebugging) {
         const char *insert = getenv("DYLD_INSERT_LIBRARIES");
         const char *zombie = getenv("NSZombiesEnabled");
@@ -408,9 +404,7 @@ void tls_init(void)
 
 /***********************************************************************
 * _objcInit
-* Former library initializer. This function is now merely a placeholder 
-* for external callers. All runtime initialization has now been moved 
-* to map_images() and _objc_init.
+* 以前的库初始化器；该函数现在只是外部调用者的占位符。现在，所有运行时初始化都被移动到 map_images() 和_objc_init() 函数。
 **********************************************************************/
 void _objcInit(void)
 {

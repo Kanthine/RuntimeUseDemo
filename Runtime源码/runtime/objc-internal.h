@@ -10,13 +10,7 @@
  * http://www.opensource.apple.com/apsl/ and read it before using this
  * file.
  * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
+ * The Original Code and all software distributed under the License are distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT. Please see the License for the specific language governing rights and limitations under the License.
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
@@ -45,27 +39,29 @@
 
 __BEGIN_DECLS
 
-// This is the allocation size required for each of the class and the metaclass 
-// with objc_initializeClassPair() and objc_readClassPair().
-// The runtime's class structure will never grow beyond this.
+/* OBJC_MAX_CLASS_SIZE 是使用 objc_initializeClassPair() 和objc_readClassPair() 函数创建的每个类和元类所需的分配大小。
+ * Runtime 类结构永远不会超出这个范围。
+ */
 #define OBJC_MAX_CLASS_SIZE (32*sizeof(void*))
 
-// In-place construction of an Objective-C class.
-// cls and metacls must each be OBJC_MAX_CLASS_SIZE bytes.
-// Returns nil if a class with the same name already exists.
-// Returns nil if the superclass is under construction.
-// Call objc_registerClassPair() when you are done.
+/* Objective-C 类的就地构造。cls 和 metacls 都必须是 OBJC_MAX_CLASS_SIZE 字节。
+ * 如果已经存在同名的类，则返回nil。
+ * 如果父类正在构造，则返回nil。
+ * 完成后，调用 objc_registerClassPair() 函数。
+ */
 OBJC_EXPORT Class objc_initializeClassPair(Class superclass, const char *name, Class cls, Class metacls) 
     __OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_3_0);
 
-// Class and metaclass construction from a compiler-generated memory image.
-// cls and cls->isa must each be OBJC_MAX_CLASS_SIZE bytes. 
-// Extra bytes not used the the metadata must be zero.
-// info is the same objc_image_info that would be emitted by a static compiler.
-// Returns nil if a class with the same name already exists.
-// Returns nil if the superclass is nil and the class is not marked as a root.
-// Returns nil if the superclass is under construction.
-// Do not call objc_registerClassPair().
+
+/* 从编译器生成的内存映像构造类和元类。
+ * cls 和 cls->isa 必须是 OBJC_MAX_CLASS_SIZE 字节。
+ * 未使用元数据的额外字节必须为零。
+ * info 与静态编译器发出的 objc_image_info 相同。
+ * 如果已经存在同名的类，则返回 nil。
+ * 如果父类为 nil 且该类未标记为根类，则返回 nil。
+ * 如果父类正在构造，则返回 nil。
+ * 不要调用 objc_registerClassPair() 函数。
+ */
 #if __OBJC2__
 struct objc_image_info;
 OBJC_EXPORT Class objc_readClassPair(Class cls, 
@@ -73,32 +69,32 @@ OBJC_EXPORT Class objc_readClassPair(Class cls,
     __OSX_AVAILABLE_STARTING(__MAC_10_10, __IPHONE_8_0);
 #endif
 
-// Batch object allocation using malloc_zone_batch_malloc().
-OBJC_EXPORT unsigned class_createInstances(Class cls, size_t extraBytes, 
+//使用 malloc_zone_batch_malloc() 函数进行批处理对象分配。
+OBJC_EXPORT unsigned class_createInstances(Class cls, size_t extraBytes,
                                            id *results, unsigned num_requested)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3)
     OBJC_ARC_UNAVAILABLE;
 
-// Get the isa pointer written into objects just before being freed.
+//在释放之前将 isa 指针写入对象中。
 OBJC_EXPORT Class _objc_getFreedObjectClass(void)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-// Return YES if GC is on and `object` is a GC allocation.
-OBJC_EXPORT BOOL objc_isAuto(id object) 
+// 如果 GC 打开，并且“object”是GC分配，则返回YES。
+OBJC_EXPORT BOOL objc_isAuto(id object)
     __OSX_AVAILABLE_STARTING(__MAC_10_4, __IPHONE_NA);
 
 // env NSObjCMessageLoggingEnabled
 OBJC_EXPORT void instrumentObjcMessageSends(BOOL flag)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-// Initializer called by libSystem
+// libSystem 调用的初始化器
 #if __OBJC2__
 OBJC_EXPORT void _objc_init(void)
     __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_6_0);
 #endif
 
 #ifndef OBJC_NO_GC
-// GC startup callback from Foundation
+// 从Foundation开始的GC启动回调
 OBJC_EXPORT malloc_zone_t *objc_collect_init(int (*callback)(void))
     __OSX_AVAILABLE_STARTING(__MAC_10_4, __IPHONE_NA);
 #endif
@@ -113,11 +109,11 @@ OBJC_EXPORT id objc_assign_threadlocal_generic(id value, id *dest)
 OBJC_EXPORT id objc_assign_ivar_generic(id value, id dest, ptrdiff_t offset)
     UNAVAILABLE_ATTRIBUTE;
 
-// Install missing-class callback. Used by the late unlamented ZeroLink.
+
+// 加载未找到类的回调. Used by the late unlamented ZeroLink.
 OBJC_EXPORT void _objc_setClassLoader(BOOL (*newClassLoader)(const char *))  OBJC2_UNAVAILABLE;
 
-// Install handler for allocation failures. 
-// Handler may abort, or throw, or provide an object to return.
+// 执行分配失败的处理程序。处理程序可以中止、抛出或提供要返回的对象。
 OBJC_EXPORT void _objc_setBadAllocHandler(id (*newHandler)(Class isa))
      __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_6_0);
 
@@ -294,18 +290,10 @@ OBJC_EXPORT id _object_readExternalReference(objc_xref_t xref)
 OBJC_EXPORT uintptr_t _object_getExternalHash(id object)
      __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
-/**
- * Returns the method implementation of an object.
- *
- * @param obj An Objective-C object.
- * @param name An Objective-C selector.
- *
- * @return The IMP corresponding to the instance method implemented by
- * the class of \e obj.
- * 
- * @note Equivalent to:
- *
- * class_getMethodImplementation(object_getClass(obj), name);
+/* 获取对象中指定选择器 SEL 的方法的实现
+ * @param name 一个 Objective-C 的选择器.
+ * @return 对应于 obj 类实现的实例方法的IMP。
+ * @note 该函数等价于: class_getMethodImplementation(object_getClass(obj), name);
  */
 OBJC_EXPORT IMP object_getMethodImplementation(id obj, SEL name)
     __OSX_AVAILABLE_STARTING(__MAC_10_9, __IPHONE_7_0);
@@ -314,8 +302,7 @@ OBJC_EXPORT IMP object_getMethodImplementation_stret(id obj, SEL name)
     __OSX_AVAILABLE_STARTING(__MAC_10_9, __IPHONE_7_0)
     OBJC_ARM64_UNAVAILABLE;
 
-
-// Instance-specific instance variable layout.
+// 特定于实例的实例变量布局。
 
 OBJC_EXPORT void _class_setIvarLayoutAccessor(Class cls_gen, const uint8_t* (*accessor) (id object))
      __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_NA);
@@ -329,7 +316,7 @@ OBJC_EXPORT BOOL _class_isFutureClass(Class cls)
     __OSX_AVAILABLE_STARTING(__MAC_10_9, __IPHONE_7_0);
 
 
-// Obsolete ARC conversions. 
+// 过时的 ARC 转换。
 
 // hack - remove and reinstate objc.h's definitions
 #undef objc_retainedObject
@@ -351,7 +338,7 @@ OBJC_EXPORT objc_objectptr_t objc_unretainedPointer(id object)
 #   define objc_unretainedPointer(o) ((objc_objectptr_t)(id)(o))
 #endif
 
-// API to only be called by root classes like NSObject or NSProxy
+// 只能由根类调用的 API ，如根类 NSObject 或 NSProxy
 
 OBJC_EXPORT
 id
@@ -472,69 +459,58 @@ objc_retainAutoreleasedReturnValue(id obj)
 
 // Accept a value returned through a +0 autoreleasing convention for use at +0.
 OBJC_EXPORT
-id
-objc_unsafeClaimAutoreleasedReturnValue(id obj)
+id objc_unsafeClaimAutoreleasedReturnValue(id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_11, __IPHONE_9_0);
 
 OBJC_EXPORT
-void
-objc_storeStrong(id *location, id obj)
+void objc_storeStrong(id *location, id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT
-id
-objc_retainAutorelease(id obj)
+id objc_retainAutorelease(id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
-// obsolete.
+// 过时的.
 OBJC_EXPORT id objc_retain_autorelease(id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT
-id
-objc_loadWeakRetained(id *location)
+id objc_loadWeakRetained(id *location)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT
-id 
-objc_initWeak(id *location, id val) 
+id  objc_initWeak(id *location, id val)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
-// Like objc_storeWeak, but stores nil if the new object is deallocating 
-// or the new object's class does not support weak references.
-// Returns the value stored (either the new object or nil).
+/* 类似于 objc_storeWeak() 函数，但如果新对象正在释放或新对象的类不支持弱引用，则存储 nil。
+ * 返回存储的值(新对象或nil)。
+ */
 OBJC_EXPORT
-id
-objc_storeWeakOrNil(id *location, id obj)
+id objc_storeWeakOrNil(id *location, id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_11, __IPHONE_9_0);
 
-// Like objc_initWeak, but stores nil if the new object is deallocating 
-// or the new object's class does not support weak references.
-// Returns the value stored (either the new object or nil).
+/* 类似于 objc_initWeak() 函数，但如果新对象正在释放或新对象的类不支持弱引用，则存储nil。
+ * 返回存储的值(新对象或nil)。
+ */
 OBJC_EXPORT
-id 
-objc_initWeakOrNil(id *location, id val) 
+id objc_initWeakOrNil(id *location, id val)
     __OSX_AVAILABLE_STARTING(__MAC_10_11, __IPHONE_9_0);
 
 OBJC_EXPORT
-void 
-objc_destroyWeak(id *location) 
+void  objc_destroyWeak(id *location)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT
-void 
-objc_copyWeak(id *to, id *from)
+void  objc_copyWeak(id *to, id *from)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT
-void 
-objc_moveWeak(id *to, id *from) 
+void  objc_moveWeak(id *to, id *from)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 
 OBJC_EXPORT
-void
-_objc_autoreleasePoolPrint(void)
+void _objc_autoreleasePoolPrint(void)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
 OBJC_EXPORT BOOL objc_should_deallocate(id object)
@@ -543,8 +519,7 @@ OBJC_EXPORT BOOL objc_should_deallocate(id object)
 OBJC_EXPORT void objc_clear_deallocating(id object)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
- 
-// to make CF link for now
+// 现在让 CF 链接
 
 OBJC_EXPORT
 void *
@@ -556,44 +531,31 @@ void
 _objc_autoreleasePoolPop(void *context)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
-
-// Extra @encode data for XPC, or NULL
+// XPC的额外 @encode 数据，或NULL
 OBJC_EXPORT const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL sel, BOOL isRequiredMethod, BOOL isInstanceMethod)
     __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_6_0);
 
-
-// API to only be called by classes that provide their own reference count storage
+// 只能由提供自己的引用计数存储的类调用的 API
 
 OBJC_EXPORT
 void
 _objc_deallocOnMainThreadHelper(void *context)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 
-// On async versus sync deallocation and the _dealloc2main flag
-//
-// Theory:
-//
-// If order matters, then code must always: [self dealloc].
-// If order doesn't matter, then always async should be safe.
-//
-// Practice:
-//
-// The _dealloc2main bit is set for GUI objects that may be retained by other
-// threads. Once deallocation begins on the main thread, doing more async
-// deallocation will at best cause extra UI latency and at worst cause
-// use-after-free bugs in unretained delegate style patterns. Yes, this is
-// extremely fragile. Yes, in the long run, developers should switch to weak
-// references.
-//
-// Note is NOT safe to do any equality check against the result of
-// dispatch_get_current_queue(). The main thread can and does drain more than
-// one dispatch queue. That is why we call pthread_main_np().
-//
-
+/* 在异步与同步释放和 _dealloc2main flag 上
+ * 原理:
+ * 如果顺序很重要，那么代码必须总是:[self dealloc] 。
+ * 如果顺序不重要，那么异步应该是安全的。
+ *
+ * 用法:
+ * _dealloc2main位 是为可能被其他线程持有的GUI对象设置的。一旦在主线程上开始释放，执行更多的异步释放最多会导致额外的UI更新延迟，最坏的情况是在未保留的委托样式模式中导致无使用后错误。这是非常脆弱的，从长远来看，开发人员应该切换到弱引用。
+ * 最坏的情况是未保留的 delegate 出现释放后使用错误的 bug。
+ * 注意，对 dispatch_get_current_queue() 的结果进行任何相等性检查是不安全的。主线程可以并确实消耗多个调度队列。 这就是我们调用pthread_main_np() 的原因。
+ */
 typedef enum {
-    _OBJC_RESURRECT_OBJECT = -1,        /* _logicBlock has called -retain, and scheduled a -release for later. */
-    _OBJC_DEALLOC_OBJECT_NOW = 1,       /* call [self dealloc] immediately. */
-    _OBJC_DEALLOC_OBJECT_LATER = 2      /* call [self dealloc] on the main queue. */
+    _OBJC_RESURRECT_OBJECT = -1,   // _logicBlock 调用了 -retain，并为以后安排了一个 -release。
+    _OBJC_DEALLOC_OBJECT_NOW = 1,  //立即调用 [self dealloc]
+    _OBJC_DEALLOC_OBJECT_LATER = 2 //在主线程调用 [self dealloc] on the main queue
 } _objc_object_disposition_t;
 
 #define _OBJC_SUPPORTED_INLINE_REFCNT_LOGIC_BLOCK(_rc_ivar, _logicBlock)        \
