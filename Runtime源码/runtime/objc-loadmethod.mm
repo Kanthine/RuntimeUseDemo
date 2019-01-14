@@ -65,63 +65,59 @@ void add_class_to_loadable_list(Class cls){
      */
     loadable_classes[loadable_classes_used].cls = cls;//+load 方法所属的Class
     loadable_classes[loadable_classes_used].method = method;//+load方法的IMP
-    loadable_classes_used++;//加 1，用于记录这个方法的调用次数；相当于数组 loadable_classes 的元素个数
+    loadable_classes_used++;//加 1，用于记录该函数的调用次数；相当于数组 loadable_classes 的元素个数
 }
 
 
-/***********************************************************************
-* add_category_to_loadable_list 将类别添加到可加载列表
-* 存在类别 cat 的父类，并且该类别已附加到其类。在其父类连接并且调用其自己的 +load方法后，为 +load 调用此类别。
-**********************************************************************/
+/* 将分类添加到可加载列表
+ * @param cat 要添加的分类
+ * @note 该函数每执行一次，loadable_categories_used 都会加 1 ；
+ * @note loadable_categories_used 用于记录这个方法的调用次数，相当于数组 loadable_categories 的元素个数
+ * @note 类cls刚刚连接起来：如果它实现了一个+load方法，那么为+load调用它。
+ */
 void add_category_to_loadable_list(Category cat){
     IMP method;
 
     loadMethodLock.assertLocked();
     
-    /* 如果分类实现了 +load 方法，则 _category_getLoadMethod() 函数返回该方法的 IMP；
-     * 如果分类没有实现+load方法，则 _category_getLoadMethod() 函数返回 nil；
-     */
+    //获取分类实现的 +load 方法的 IMP；如果该分类没有实现+load 方法 ，则返回 nil
     method = _category_getLoadMethod(cat);
 
-    // 如果 cat 没有 +load 方法就不执行
-    if (!method) return;
+    if (!method) return;// 如果 cat 没有 +load 方法就不执行
 
     if (PrintLoading) {
-        _objc_inform("LOAD: category '%s(%s)' scheduled for +load", 
-                     _category_getClassName(cat), _category_getName(cat));
+        _objc_inform("LOAD: category '%s(%s)' scheduled for +load", _category_getClassName(cat), _category_getName(cat));
     }
     
+    // 如果已使用大小等于数组大小，对数组进行动态扩容
     if (loadable_categories_used == loadable_categories_allocated) {
         loadable_categories_allocated = loadable_categories_allocated*2 + 16;
-        loadable_categories = (struct loadable_category *)
-            realloc(loadable_categories,
-                              loadable_categories_allocated *
-                              sizeof(struct loadable_category));
+        loadable_categories = (struct loadable_category *)realloc(loadable_categories,loadable_categories_allocated *sizeof(struct loadable_category));
     }
 
-    loadable_categories[loadable_categories_used].cat = cat;
-    loadable_categories[loadable_categories_used].method = method;
-    loadable_categories_used++;
+    /* loadable_categories[loadable_categories_used] 取出数组中第 loadable_categories_used 个元素
+     * 该元素是个结构体 loadable_class ，分别为它的成员赋值
+     */
+    loadable_categories[loadable_categories_used].cat = cat;//+load 方法所属的分类
+    loadable_categories[loadable_categories_used].method = method;//+load方法的IMP
+    loadable_categories_used++;//加 1，用于记录该函数的调用次数；相当于数组 loadable_categories 的元素个数
 }
 
-
-/***********************************************************************
-* remove_class_from_loadable_list
-* Class cls may have been loadable before, but it is now no longer 
-* loadable (because its image is being unmapped). 
-**********************************************************************/
-void remove_class_from_loadable_list(Class cls)
-{
+/* 从可加载列表中移除类
+ * @param cls 要移除的类
+ * @note 类 cls 以前可能是可加载的，但现在它不再可加载(因为它的镜像是未映射的)。
+ */
+void remove_class_from_loadable_list(Class cls){
     loadMethodLock.assertLocked();
 
     if (loadable_classes) {
         int i;
+        //遍历结构数组 loadable_classes，根据入参 cls 找到数组中指定的元素
         for (i = 0; i < loadable_classes_used; i++) {
             if (loadable_classes[i].cls == cls) {
-                loadable_classes[i].cls = nil;
+                loadable_classes[i].cls = nil;//将成员 cls 置为 nil
                 if (PrintLoading) {
-                    _objc_inform("LOAD: class '%s' unscheduled for +load", 
-                                 cls->nameForLogging());
+                    _objc_inform("LOAD: class '%s' unscheduled for +load", cls->nameForLogging());
                 }
                 return;
             }
@@ -129,25 +125,21 @@ void remove_class_from_loadable_list(Class cls)
     }
 }
 
-
-/***********************************************************************
-* remove_category_from_loadable_list
-* Category cat may have been loadable before, but it is now no longer 
-* loadable (because its image is being unmapped). 
-**********************************************************************/
-void remove_category_from_loadable_list(Category cat)
-{
+/* 从可加载列表中移除分类
+ * @param cls 要移除的分类
+ * @note 分类 cat 以前可能是可加载的，但现在它不再可加载(因为它的镜像是未映射的)。
+ */
+void remove_category_from_loadable_list(Category cat){
     loadMethodLock.assertLocked();
 
     if (loadable_categories) {
         int i;
+        //遍历结构数组 loadable_categories，根据入参 cat 找到数组中指定的元素
         for (i = 0; i < loadable_categories_used; i++) {
             if (loadable_categories[i].cat == cat) {
-                loadable_categories[i].cat = nil;
+                loadable_categories[i].cat = nil;//将成员 cat 置为 nil
                 if (PrintLoading) {
-                    _objc_inform("LOAD: category '%s(%s)' unscheduled for +load",
-                                 _category_getClassName(cat), 
-                                 _category_getName(cat));
+                    _objc_inform("LOAD: category '%s(%s)' unscheduled for +load",_category_getClassName(cat),_category_getName(cat));
                 }
                 return;
             }
@@ -163,31 +155,28 @@ void remove_category_from_loadable_list(Category cat)
 *
 * Called only by call_load_methods().
 **********************************************************************/
-static void call_class_loads(void)
-{
+static void call_class_loads(void){
     int i;
     
-    // Detach current loadable list.
+    // 分离当前可加载列表。
     struct loadable_class *classes = loadable_classes;
     int used = loadable_classes_used;
     loadable_classes = nil;
     loadable_classes_allocated = 0;
     loadable_classes_used = 0;
     
-    // Call all +loads for the detached list.
+    // 遍历列表中的所有 +load 方法
     for (i = 0; i < used; i++) {
-        Class cls = classes[i].cls;
-        load_method_t load_method = (load_method_t)classes[i].method;
-        if (!cls) continue; 
+        Class cls = classes[i].cls;//获取指定索引处的类
+        load_method_t load_method = (load_method_t)classes[i].method;//获取 +load 方法的 IMP
+        if (!cls) continue; //如果该类为 nil ，则直接返回
 
         if (PrintLoading) {
             _objc_inform("LOAD: +[%s load]\n", cls->nameForLogging());
         }
-        (*load_method)(cls, SEL_load);
+        (*load_method)(cls, SEL_load);//通过函数指针执行指定类 cls 的 +load 方法
     }
-    
-    // Destroy the detached list.
-    if (classes) free(classes);
+    if (classes) free(classes);//释放列表
 }
 
 

@@ -1248,6 +1248,7 @@ static Class remapClass(Class cls)
     }
 }
 
+// 重新映射类
 static Class remapClass(classref_t cls)
 {
     return remapClass((Class)cls);
@@ -4224,29 +4225,21 @@ const char * _category_getClassName(Category cat){
 }
 
 
-/***********************************************************************
- * _category_getClass
- * Returns a category's class
- * Called only by call_category_loads.
- * Locking: read-locks runtimeLock
- **********************************************************************/
-Class
-_category_getClass(Category cat)
-{
+/* 获取分类所属的类
+ * @param cat 指定的分类
+ * @note 要求该分类所属的类必须已实现；否则断言失败，程序终止
+ */
+Class _category_getClass(Category cat){
     rwlock_reader_t lock(runtimeLock);
-    Class result = remapClass(cat->cls);
-    assert(result->isRealized());  // ok for call_category_loads' usage
+    Class result = remapClass(cat->cls);// 重新映射类
+    assert(result->isRealized());  //该类已实现
     return result;
 }
 
 
-/***********************************************************************
- * _category_getLoadMethod 从类别获取 +load 方法
- * 只从add_category_to_loadable_list调用
- * 锁定:调用者必须读或写锁定 runtimeLock
- **********************************************************************/
-IMP
-_category_getLoadMethod(Category cat){
+/* 获取分类实现的 +load 方法的 IMP；如果该分类没有实现+load 方法 ，则返回 nil
+ */
+IMP _category_getLoadMethod(Category cat){
     runtimeLock.assertLocked();
     const method_list_t *mlist;
     mlist = cat->classMethods;//获取分类的类方法列表
