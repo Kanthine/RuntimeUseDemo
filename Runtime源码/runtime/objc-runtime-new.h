@@ -355,9 +355,9 @@ struct locstamped_category_list_t {
 
 // Values for class_ro_t->flags
 // These are emitted by the compiler and are part of the ABI. 
-// class is a metaclass
+// 元类
 #define RO_META               (1<<0)
-// class is a root class
+// 一个根类
 #define RO_ROOT               (1<<1)
 // class has .cxx_construct/destruct implementations
 #define RO_HAS_CXX_STRUCTORS  (1<<2)
@@ -376,32 +376,32 @@ struct locstamped_category_list_t {
 
 // class is in an unloadable bundle - must never be set by compiler
 #define RO_FROM_BUNDLE        (1<<29)
-// class is unrealized future class - must never be set by compiler
+// 未实现的future class——永远不能由编译器设置
 #define RO_FUTURE             (1<<30)
 // class is realized - must never be set by compiler
 #define RO_REALIZED           (1<<31)
 
-// Values for class_rw_t->flags
-// These are not emitted by the compiler and are never used in class_ro_t. 
-// Their presence should be considered in future ABI versions.
+// 标志值 class_rw_t->flags: 这不是编译器发出的，在 class_ro_t 中从未使用过
+//在以后的ABI版本中应该考虑到它们的存在。
 // class_t->data is class_rw_t, not class_ro_t
 #define RW_REALIZED           (1<<31)
-// class is unresolved future class
+// 未解析的 future class
 #define RW_FUTURE             (1<<30)
-// class is initialized
+// 已经完成初始化
 #define RW_INITIALIZED        (1<<29)
-// class is initializing
+// 正在初始化
 #define RW_INITIALIZING       (1<<28)
 // class_rw_t->ro is heap copy of class_ro_t
 #define RW_COPIED_RO          (1<<27)
-// class allocated but not yet registered
+// 已创建但尚未注册的类
 #define RW_CONSTRUCTING       (1<<26)
-// class allocated and registered
+// 已创建并且注册的类
 #define RW_CONSTRUCTED        (1<<25)
 // GC:  class has unsafe finalize method
 #define RW_FINALIZE_ON_MAIN_THREAD (1<<24)
-// class +load has been called
+// 类方法 +load 已经调用
 #define RW_LOADED             (1<<23)
+
 #if !SUPPORT_NONPOINTER_ISA
 // class instances may have associative references
 #define RW_INSTANCES_HAVE_ASSOCIATED_OBJECTS (1<<22)
@@ -410,7 +410,7 @@ struct locstamped_category_list_t {
 #define RW_HAS_INSTANCE_SPECIFIC_LAYOUT (1 << 21)
 // available for use
 // #define RW_20       (1<<20)
-// class has started realizing but not yet completed it
+// 类已经开始实现，但尚未完成
 #define RW_REALIZING          (1<<19)
 
 // NOTE: MORE RW_ FLAGS DEFINED BELOW
@@ -512,14 +512,15 @@ struct class_ro_t {
 
     const uint8_t * ivarLayout;
     
-    const char * name;
-    method_list_t * baseMethodList;
-    protocol_list_t * baseProtocols;
-    const ivar_list_t * ivars;
+    const char * name;//类的名称
+    method_list_t * baseMethodList;//基础方法列表
+    protocol_list_t * baseProtocols;//基础协议列表
+    const ivar_list_t * ivars;//变量列表
 
     const uint8_t * weakIvarLayout;
-    property_list_t *baseProperties;
+    property_list_t *baseProperties;//基础属性列表
 
+    //获取基础方法列表
     method_list_t *baseMethods() const {
         return baseMethodList;
     }
@@ -545,8 +546,8 @@ template <typename Element, typename List>
 class list_array_tt {
     struct array_t {
         uint32_t count;
-        List* lists[0];
-
+        List* lists[0];//方法列表，存储着一个个方法
+        
         static size_t byteSize(uint32_t count) {
             return sizeof(array_t) + count*sizeof(lists[0]);
         }
@@ -669,19 +670,21 @@ class list_array_tt {
         }
     }
 
+    /* 添加方法列表
+     * @param addedLists 待添加的方法列表
+     * @param addedCount 待添加的方法数量
+     */
     void attachLists(List* const * addedLists, uint32_t addedCount) {
-        if (addedCount == 0) return;
-
+        if (addedCount == 0) return;//如果待添加 0 项，则直接返回
+        
         if (hasArray()) {
             // many lists -> many lists
             uint32_t oldCount = array()->count;
             uint32_t newCount = oldCount + addedCount;
             setArray((array_t *)realloc(array(), array_t::byteSize(newCount)));
-            array()->count = newCount;
-            memmove(array()->lists + addedCount, array()->lists, 
-                    oldCount * sizeof(array()->lists[0]));
-            memcpy(array()->lists, addedLists, 
-                   addedCount * sizeof(array()->lists[0]));
+            array()->count = newCount;//重置方法数量
+            memmove(array()->lists + addedCount, array()->lists, oldCount * sizeof(array()->lists[0]));
+            memcpy(array()->lists, addedLists, addedCount * sizeof(array()->lists[0]));
         }
         else if (!list  &&  addedCount == 1) {
             // 0 lists -> 1 list
@@ -695,8 +698,7 @@ class list_array_tt {
             setArray((array_t *)malloc(array_t::byteSize(newCount)));
             array()->count = newCount;
             if (oldList) array()->lists[addedCount] = oldList;
-            memcpy(array()->lists, addedLists, 
-                   addedCount * sizeof(array()->lists[0]));
+            memcpy(array()->lists, addedLists, addedCount * sizeof(array()->lists[0]));
         }
     }
 
@@ -1012,7 +1014,7 @@ public:
 struct objc_class : objc_object {
     // Class ISA;
     Class superclass;
-    cache_t cache;             // formerly cache pointer and vtable
+    cache_t cache;             // 以前的缓存指针和vtable
     class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
 
     class_rw_t *data() { 
@@ -1034,7 +1036,7 @@ struct objc_class : objc_object {
 
     // set and clear must not overlap
     void changeInfo(uint32_t set, uint32_t clear) {
-        assert(isFuture()  ||  isRealized());
+        assert(isFuture()  ||  isRealized());//如果未实现 或者是 future class ，则终止
         assert((set & clear) == 0);
         data()->changeFlags(set, clear);
     }
@@ -1256,14 +1258,16 @@ struct category_t {
     struct protocol_list_t *protocols;//分类实现的协议列表
     struct property_list_t *instanceProperties;//分类添加的实例属性列表
 
+    //获取方法列表
     method_list_t *methodsForMeta(bool isMeta) {
-        if (isMeta) return classMethods;
-        else return instanceMethods;
+        if (isMeta) return classMethods;//如果是元类，获取类方法列表
+        else return instanceMethods;//否则，获取实例方法列表
     }
 
+    //获取属性列表
     property_list_t *propertiesForMeta(bool isMeta) {
-        if (isMeta) return nil; // classProperties;
-        else return instanceProperties;
+        if (isMeta) return nil; //如果是元类，返回 nil;
+        else return instanceProperties;//否则，获取实例属性列表
     }
 };
 

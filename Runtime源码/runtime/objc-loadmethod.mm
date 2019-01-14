@@ -1,15 +1,3 @@
-/*
- * Copyright (c) 2004-2006 Apple Inc.  All Rights Reserved.
- * 
- * @APPLE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code as defined in and that are subject to the Apple Public Source License Version 2.0 (the 'License'). You may not use this file except in compliance with the License. Please obtain a copy of the License at http://www.opensource.apple.com/apsl/ and read it before using this file.
- * 
- * The Original Code and all software distributed under the License are distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT. Please see the License for the specific language governing rights and limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- */
-
 /***********************************************************************
 * objc-loadmethod.m
 * 支持+load方法
@@ -22,58 +10,62 @@ typedef void(*load_method_t)(id, SEL);
 
 //存储了 +load 方法所属的Class和+load方法的IMP
 struct loadable_class {
-    Class cls;  // may be nil
-    IMP method;
+    Class cls;  //+load 方法所属的Class；可能为 nil
+    IMP method;//+load方法的IMP
 };
 
 //存储了 +load 方法所属的 Category 和+load方法的IMP
 struct loadable_category {
-    Category cat;  // may be nil
-    IMP method;
+    Category cat;  //+load 方法所属的 Category；可能为 nil
+    IMP method;//+load方法的IMP
 };
 
-// 需要调用 +load 的类列表(挂起父类+load)
-// 由于这个列表的构造方式，它总是先有父类
+/* loadable_classes 结构数组：存储着一个个结构元素 loadable_class
+ * 静态变量 loadable_classes_used 用于记录 add_class_to_loadable_list() 函数的调用次数，也是 loadable_classes 数组的元素个数
+ * @note 由于该数组的构造方式，要求总是先有父类
+ */
 static struct loadable_class *loadable_classes = nil;
-//每次调用add_class_to_loadable_list()方法都会++，记录这个方法的调用次数，也相当于Class中+load方法列表的个数
 static int loadable_classes_used = 0;
 static int loadable_classes_allocated = 0;
 
-// 需要调用 +load 的 categories 列表(挂起父类+load)
+/* loadable_categories 结构数组：存储着一个个结构元素 loadable_category
+ * 静态变量 loadable_categories_used 用于记录 add_category_to_loadable_list() 函数的调用次数，也是 loadable_categories 数组的元素个数
+ * @note 需要调用 +load 的 categories 列表(挂起父类+load)
+ */
 static struct loadable_category *loadable_categories = nil;
-//每次调用add_category_to_loadable_list()方法都会++，和Category中的+load方法列表
 static int loadable_categories_used = 0;
 static int loadable_categories_allocated = 0;
 
 
-/***********************************************************************
-* 将类添加到可加载列表中
-* 类cls刚刚连接起来：如果它实现了一个+load方法，那么为+load调用它。
-**********************************************************************/
+/* 将类添加到可加载列表中
+ * @param cls 要添加的类
+ * @note 该函数每执行一次，loadable_classes_used 都会加 1 ；
+ * @note loadable_classes_used 用于记录这个方法的调用次数，相当于数组 loadable_classes 的元素个数
+ * @note 类cls刚刚连接起来：如果它实现了一个+load方法，那么为+load调用它。
+ */
 void add_class_to_loadable_list(Class cls){
     IMP method;
-
     loadMethodLock.assertLocked();
 
-    method = cls->getLoadMethod();
-    if (!method) return;  // Don't bother if cls has no +load method
+    method = cls->getLoadMethod();//获取类 cls 的 +load 方法的 IMP
+    if (!method) return;  // 如果 cls 没有+load 方法，直接返回，不需要接着执行
     
     if (PrintLoading) {
-        _objc_inform("LOAD: class '%s' scheduled for +load", 
-                     cls->nameForLogging());
+        _objc_inform("LOAD: class '%s' scheduled for +load", cls->nameForLogging());
     }
     
     if (loadable_classes_used == loadable_classes_allocated) {
+        // 如果已使用大小等于数组大小，对数组进行动态扩容
         loadable_classes_allocated = loadable_classes_allocated*2 + 16;
-        loadable_classes = (struct loadable_class *)
-            realloc(loadable_classes,
-                              loadable_classes_allocated *
-                              sizeof(struct loadable_class));
+        loadable_classes = (struct loadable_class *)realloc(loadable_classes,loadable_classes_allocated *sizeof(struct loadable_class));
     }
     
-    loadable_classes[loadable_classes_used].cls = cls;
-    loadable_classes[loadable_classes_used].method = method;
-    loadable_classes_used++;
+    /* loadable_classes[loadable_classes_used] 取出数组中第 loadable_classes_used 个元素
+     * 该元素是个结构体 loadable_class ，分别为它的成员赋值
+     */
+    loadable_classes[loadable_classes_used].cls = cls;//+load 方法所属的Class
+    loadable_classes[loadable_classes_used].method = method;//+load方法的IMP
+    loadable_classes_used++;//加 1，用于记录这个方法的调用次数；相当于数组 loadable_classes 的元素个数
 }
 
 

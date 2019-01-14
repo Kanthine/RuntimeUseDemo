@@ -87,7 +87,7 @@ static bool isUTF8Continuation(char c)
     return (c & 0xc0) == 0x80;  // continuation byte is 0b10xxxxxx
 }
 
-// Add "message" to any forthcoming crash log.
+// 添加“消息”到任何即将到来的崩溃日志。
 static void _objc_crashlog(const char *message)
 {
     char *newmsg;
@@ -147,7 +147,7 @@ static bool also_do_stderr(void)
     return false;
 }
 
-// Print "message" to the console.
+// 将“message”打印到控制台
 static void _objc_syslog(const char *message)
 {
     _simple_asl_log(ASL_LEVEL_ERR, nil, message);
@@ -179,8 +179,7 @@ void _objc_error(id self, const char *fmt, va_list ap)
     _objc_trap();
 }
 
-/*
- * this routine handles errors that involve an object (or class).
+/* 该函数处理涉及对象(或类)的错误。
  */
 void __objc_error(id rcv, const char *fmt, ...) 
 { 
@@ -194,9 +193,8 @@ void __objc_error(id rcv, const char *fmt, ...)
     va_end(vp);
 }
 
-/*
- * this routine handles severe runtime errors...like not being able
- * to read the mach headers, allocate space, etc...very uncommon.
+/* 该函数处理严重的运行时错误…比如不能读取 mach 头文件，不能分配空间等等……非常少见。
+ * 会终止程序
  */
 void _objc_fatal(const char *fmt, ...)
 {
@@ -212,10 +210,12 @@ void _objc_fatal(const char *fmt, ...)
     _objc_syslog(buf2);
     _objc_crashlog(buf2);
 
+    //终止进程并生成崩溃日志：比调用 exit() 函数要好
     _objc_trap();
 }
 
 /* 该函数处理 Runtime 错误；比如不能向类中添加类别(因为它没有被链接)。
+ * 将错误信息打印到控制台
  */
 void _objc_inform(const char *fmt, ...)
 {
@@ -228,16 +228,14 @@ void _objc_inform(const char *fmt, ...)
     va_end (ap);
 
     asprintf(&buf2, "objc[%d]: %s\n", getpid(), buf1);
-    _objc_syslog(buf2);
+    _objc_syslog(buf2);//将 buf2 打印到控制台
 
     free(buf2);
     free(buf1);
 }
 
 
-/* 
- * Like _objc_inform(), but prints the message only in any 
- * forthcoming crash log, not to the console.
+/* 类似于_objc_inform() ，但是只在任何即将出现的崩溃日志中打印消息，而不是打印到控制台。
  */
 void _objc_inform_on_crash(const char *fmt, ...)
 {
@@ -257,8 +255,7 @@ void _objc_inform_on_crash(const char *fmt, ...)
 }
 
 
-/* 
- * Like calling both _objc_inform and _objc_inform_on_crash.
+/* 比如同时调用 _objc_inform 和 _objc_inform_on_crash 。
  */
 void _objc_inform_now_and_on_crash(const char *fmt, ...)
 {
@@ -279,15 +276,14 @@ void _objc_inform_now_and_on_crash(const char *fmt, ...)
 }
 
 
-/* Kill the process in a way that generates a crash log. 
- * This is better than calling exit(). */
+/* 终止进程并生成崩溃日志：这比调用 exit() 函数要好。*/
 static void _objc_trap(void) 
 {
     __builtin_trap();
 }
 
-/* Try to keep _objc_warn_deprecated out of crash logs 
- * caused by _objc_trap(). rdar://4546883 */
+
+/* 尝试将 _objc_warn_deprecated 从 _objc_trap() 引起的崩溃日志中删除。rdar://4546883 */
 __attribute__((used))
 static void _objc_trap2(void)
 {

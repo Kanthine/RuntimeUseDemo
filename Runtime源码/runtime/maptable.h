@@ -1,27 +1,4 @@
-/*
- * Copyright (c) 1999-2003, 2006-2007 Apple Inc.  All Rights Reserved.
- * 
- * @APPLE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- */
-/*	maptable.h
-	Scalable hash table of mappings.
+/*	maptable.h 可扩展映射哈希表。
 	Bertrand, August 1990
 	Copyright 1990-1996 NeXT Software, Inc.
 */
@@ -39,31 +16,29 @@
 
 __BEGIN_DECLS
 
-/***************	Definitions		***************/
+#pragma mark - 结构定义
 
-/*
- 这个模块存储任意关联[key ->value]。键和值必须是指针或整数，客户端负责分配/释放这些数据。提供了一个deallocation回调。
- NX_MAPNOTAKEY(-1)在内部用作标记，因此键必须始终与-1不同。
-作为表现良好的可扩展数据结构，哈希表在开始变满时会增加一倍，从而保证了平均固定时间访问和线性大小。
- 
-NSMapTable是可变的；可以通过弱引用来持有keys和values，所以当key或者value被deallocated的时候，所存储的实体也会被移除；NSMapTable可以在添加value的时候对value进行复制；
-和NSHashTable类似，NSMapTable可以随意的存储指针，并且利用指针的唯一性来进行对比和重复检查。
+/* 映射哈希表 NXMapTable
+ * 存储任意的键值对：键和值必须是指针或整数，客户端负责分配/释放这些数据。提供了一个deallocation回调。
+ * 作为表现良好的可扩展数据结构，哈希表在开始变满时会增加一倍，从而保证了平均固定时间访问和线性大小。
+ * 该映射表是可变的；
+ * 可以通过弱引用来持有keys和values，所以当key或者value被deallocated的时候，所存储的实体也会被移除；
+ * 该映射表可以在添加value的时候对value进行复制；
+ * 和 NSHashTable 类似，NSMapTable可以随意的存储指针，并且利用指针的唯一性来进行对比和重复检查。
  */
-
 typedef struct _NXMapTable {
-    /* private data structure; may change */
     const struct _NXMapTablePrototype	*prototype;
-    unsigned	count;
+    unsigned	count;//存储的数据的数量
     unsigned	nbBucketsMinusOne;
-    void	*buckets;
+    void	*buckets;//真正用来存储数据的数组。
 } NXMapTable OBJC_MAP_AVAILABILITY;
 
 //_NXMapTablePrototype 存储了一些构建哈希表必要的函数指针如：hash、isEqual 和 free 的函数指针
 typedef struct _NXMapTablePrototype {
     unsigned	(*hash)(NXMapTable *, const void *key);//用于获取数据的哈希的函数地址
     int		(*isEqual)(NXMapTable *, const void *key1, const void *key2);//判断两个数据是否相等的函数地址
-    void	(*free)(NXMapTable *, void *key, void *value);//释放数据的函数地址
-    int		style; /* reserved for future expansion; currently 0 */
+    void	(*free)(NXMapTable *, void *key, void *value);//释放数据的函数地址；
+    int		style; //预留作日后扩展之用;目前为 0；
 } NXMapTablePrototype OBJC_MAP_AVAILABILITY;
 
     /* invariants assumed by the implementation: 
@@ -76,7 +51,8 @@ typedef struct _NXMapTablePrototype {
 //NX_MAPNOTAKEY(-1)在内部用作标记，因此键必须始终与-1不同。
 #define NX_MAPNOTAKEY	((void *)(-1))
 
-/***************	Functions		***************/
+#pragma mark - 功能函数
+
 //哈希表 NXMapTable 使用 NXCreateMapTableFromZone() 函数初始化：
 OBJC_EXPORT NXMapTable *NXCreateMapTableFromZone(NXMapTablePrototype prototype, unsigned capacity, void *z) OBJC_MAP_AVAILABILITY;
 OBJC_EXPORT NXMapTable *NXCreateMapTable(NXMapTablePrototype prototype, unsigned capacity) OBJC_MAP_AVAILABILITY;

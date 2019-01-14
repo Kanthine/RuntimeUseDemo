@@ -298,8 +298,8 @@ static class_ro_t *make_ro_writeable(class_rw_t *rw)
 
 
 /***********************************************************************
- * unattachedCategories  获取未添加到Class中的category哈希表
- * Returns the class => categories map of unattached categories.
+ * 获取未添加到Class中的category哈希表 NXMapTable
+ * 哈希表 NXMapTable 存储着键值对：键为指定的类，值为未添加到指定类中 category 列表
  * Locking: runtimeLock must be held by the caller.
  **********************************************************************/
 static NXMapTable *unattachedCategories(void)
@@ -350,8 +350,7 @@ static void addUnattachedCategoryForClass(category_t *cat, Class cls,
 
 
 /***********************************************************************
- * removeUnattachedCategoryForClass
- * Removes an unattached category.
+ * removeUnattachedCategoryForClass 移除类的未附加分类
  * Locking: runtimeLock must be held by the caller.
  **********************************************************************/
 static void removeUnattachedCategoryForClass(category_t *cat, Class cls)
@@ -359,16 +358,19 @@ static void removeUnattachedCategoryForClass(category_t *cat, Class cls)
     runtimeLock.assertWriting();
     
     // DO NOT use cat->cls! cls may be cat->cls->isa instead
-    NXMapTable *cats = unattachedCategories();
+    NXMapTable *cats = unattachedCategories();//获取未添加到Class中的category哈希表
     category_list *list;
     
+    //根据键 cls 取出哈希表 cats 中对应的值
     list = (category_list *)NXMapGet(cats, cls);
+    //如果取出的值为 NULL ，则返回
     if (!list) return;
     
+    //遍历 category_list：查找指定的 category_t
     uint32_t i;
     for (i = 0; i < list->count; i++) {
         if (list->list[i].cat == cat) {
-            // shift entries to preserve list order
+            //在 category_list 中找到指定的 category_t：删除该category_t 并 移动条目以保留列表顺序
             memmove(&list->list[i], &list->list[i+1],
                     (list->count-i-1) * sizeof(list->list[i]));
             list->count--;
@@ -379,16 +381,16 @@ static void removeUnattachedCategoryForClass(category_t *cat, Class cls)
 
 
 /***********************************************************************
- * unattachedCategoriesForClass
- * Returns the list of unattached categories for a class, and
- * deletes them from the list.
- * The result must be freed by the caller.
+ * 获取指定类的未附加类别列表，并将其从哈希表中删除。
+ * @param realizing
+ * @note 最后需要释放获取的列表。
  * Locking: runtimeLock must be held by the caller.
  **********************************************************************/
 static category_list *
 unattachedCategoriesForClass(Class cls, bool realizing)
 {
     runtimeLock.assertWriting();
+    //unattachedCategories() 函数获取未添加到 Class 中的 category 哈希表
     return (category_list *)NXMapRemove(unattachedCategories(), cls);
 }
 
@@ -408,12 +410,10 @@ static void removeAllUnattachedCategoriesForClass(Class cls)
 
 
 /***********************************************************************
- * classNSObject
- * Returns class NSObject.
+ * 获取 NSObject 类
  * Locking: none
  **********************************************************************/
-static Class classNSObject(void)
-{
+static Class classNSObject(void){
     extern objc_class OBJC_CLASS_$_NSObject;
     return (Class)&OBJC_CLASS_$_NSObject;
 }
@@ -484,23 +484,20 @@ static void printReplacements(Class cls, category_list *cats)
     }
 }
 
-
-static bool isBundleClass(Class cls)
-{
+//判断是否是 Bundle 中的类
+static bool isBundleClass(Class cls){
     return cls->data()->ro->flags & RO_FROM_BUNDLE;
 }
 
 
-static void
-fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort)
-{
+static void fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort){
     runtimeLock.assertWriting();
     assert(!mlist->isFixedUp());
     
     // fixme lock less in attachMethodLists ?
     sel_lock();
     
-    // Unique selectors in list.
+    // 方法列表中的唯一选择器。
     for (auto& meth : *mlist) {
         const char *name = sel_cname(meth.name);
         
@@ -524,9 +521,10 @@ fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort)
     mlist->setFixedUp();
 }
 
-
-static void
-prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
+/* 准备 mlists 中的方法
+ *
+ */
+static void prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
                    bool baseMethods, bool methodsFromBundle)
 {
     runtimeLock.assertWriting();
@@ -571,70 +569,73 @@ prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
 }
 
 
-// Attach method lists and properties and protocols from categories to a class.
-// Assumes the categories in cats are all loaded and sorted by load order,
-// oldest categories first.
-static void
-attachCategories(Class cls, category_list *cats, bool flush_caches)
-{
-    if (!cats) return;
+/* 将分类中的方法列表、属性列表和协议列表添加到类:
+ * @param flush_caches 是否清空缓存：YES则清空方法缓存
+ * @note 假设分类列表中的分类都是按加载顺序加载和排序的，该函数倒序遍历分类列表（最老的类别优先）
+ *
+ *
+ */
+static void attachCategories(Class cls, category_list *cats, bool flush_caches){
+    if (!cats) return;//分类列表为空，则直接返回；
     if (PrintReplacedMethods) printReplacements(cls, cats);
     
-    bool isMeta = cls->isMetaClass();
+    bool isMeta = cls->isMetaClass();//判断是否是元类
     
     // fixme rearrange to remove these intermediate allocations
-    method_list_t **mlists = (method_list_t **)
-    malloc(cats->count * sizeof(*mlists));
-    property_list_t **proplists = (property_list_t **)
-    malloc(cats->count * sizeof(*proplists));
-    protocol_list_t **protolists = (protocol_list_t **)
-    malloc(cats->count * sizeof(*protolists));
+    method_list_t **mlists = (method_list_t **)malloc(cats->count * sizeof(*mlists));//方法列表
+    property_list_t **proplists = (property_list_t **)malloc(cats->count * sizeof(*proplists));//属性列表
+    protocol_list_t **protolists = (protocol_list_t **)malloc(cats->count * sizeof(*protolists));//协议列表
     
-    // Count backwards through cats to get newest categories first
-    int mcount = 0;
-    int propcount = 0;
-    int protocount = 0;
-    int i = cats->count;
+    // 倒序遍历分类列表，最先得到最新的分类
+    int mcount = 0;//方法数量
+    int propcount = 0;//属性数量
+    int protocount = 0;//协议数量
+    int i = cats->count;//从分类的最后一个元素开始遍历
     bool fromBundle = NO;
     while (i--) {
         auto& entry = cats->list[i];
         
+        //获取方法列表：如果是元类，获取类方法列表；否则获取实例方法列表
         method_list_t *mlist = entry.cat->methodsForMeta(isMeta);
         if (mlist) {
-            mlists[mcount++] = mlist;
-            fromBundle |= entry.hi->isBundle();
+            mlists[mcount++] = mlist;// 将方法列表放入 mlists 方法列表数组中
+            fromBundle |= entry.hi->isBundle();// 分类的头部信息中存储了是否是 bundle，将其记住
         }
         
+        //获取属性列表：如果是元类返回 nil ；否则返回实例属性列表
         property_list_t *proplist = entry.cat->propertiesForMeta(isMeta);
         if (proplist) {
-            proplists[propcount++] = proplist;
+            proplists[propcount++] = proplist;// 将属性列表放入属性列表数组proplists中
         }
         
-        protocol_list_t *protolist = entry.cat->protocols;
+        protocol_list_t *protolist = entry.cat->protocols;//分类实现的协议列表
         if (protolist) {
-            protolists[protocount++] = protolist;
+            protolists[protocount++] = protolist;// 将协议列表放入协议列表数组 protolists 中
         }
     }
     
-    auto rw = cls->data();
+    auto rw = cls->data();//取出 cls 的 class_rw_t 数据
     
+    // 将新方法列表添加到 rw 中的方法列表中
     prepareMethodLists(cls, mlists, mcount, NO, fromBundle);
     rw->methods.attachLists(mlists, mcount);
-    free(mlists);
+    free(mlists);// 释放 mlists
     if (flush_caches  &&  mcount > 0) flushCaches(cls);
     
+    // 将新属性列表添加到 rw 中的属性列表中
     rw->properties.attachLists(proplists, propcount);
-    free(proplists);
+    free(proplists);// 释放 proplists
     
+    // 将新协议列表添加到 rw 中的协议列表中
     rw->protocols.attachLists(protolists, protocount);
-    free(protolists);
+    free(protolists);// 释放 protolists
 }
 
 
 /***********************************************************************
- * methodizeClass
- * Fixes up cls's method list, protocol list, and property list.
- * Attaches any outstanding categories.
+ * methodizeClass 为 Class 指定顺序：
+ * 修复 cls 的方法列表、协议列表和属性列表；
+ * 附加任何未完成的类别；
  * Locking: runtimeLock must be held by the caller
  **********************************************************************/
 static void methodizeClass(Class cls)
@@ -651,7 +652,7 @@ static void methodizeClass(Class cls)
                      cls->nameForLogging(), isMeta ? "(meta)" : "");
     }
     
-    // Install methods and properties that the class implements itself.
+    // 加载类本身实现的方法和属性。
     method_list_t *list = ro->baseMethods();
     if (list) {
         prepareMethodLists(cls, &list, 1, YES, isBundleClass(cls));
@@ -668,14 +669,13 @@ static void methodizeClass(Class cls)
         rw->protocols.attachLists(&protolist, 1);
     }
     
-    // Root classes get bonus method implementations if they don't have
-    // them already. These apply before category replacements.
+    // 如果根类还没有方法实现，那么它们将获得额外的方法实现。这些适用于类别替换之前。
     if (cls->isRootMetaclass()) {
-        // root metaclass
+        // 根元类
         addMethod(cls, SEL_initialize, (IMP)&objc_noop_imp, "", NO);
     }
     
-    // Attach categories.
+    // 附加 categories.
     category_list *cats = unattachedCategoriesForClass(cls, true /*realizing*/);
     attachCategories(cls, cats, false /*don't flush caches*/);
     
@@ -707,28 +707,29 @@ static void methodizeClass(Class cls)
 
 /***********************************************************************
  * remethodizeClass
- * Attach outstanding categories to an existing class.
- * Fixes up cls's method list, protocol list, and property list.
- * Updates method caches for cls and its subclasses.
+ * 将未完成的类别附加到现有类。
+ * 修复了cls的方法列表，协议列表和属性列表。
+ * 更新 cls 及其子类的方法缓存。
  * Locking: runtimeLock must be held by the caller
  **********************************************************************/
 static void remethodizeClass(Class cls)
 {
-    category_list *cats;
+    category_list *cats;//未添加到类的分类列表
     bool isMeta;
     
     runtimeLock.assertWriting();
     
-    isMeta = cls->isMetaClass();
+    isMeta = cls->isMetaClass();//是否是元类
     
-    // Re-methodizing: check for more categories
+    //获取指定类的未附加类别列表，并将其从哈希表中删除
     if ((cats = unattachedCategoriesForClass(cls, false/*not realizing*/))) {
         if (PrintConnecting) {
             _objc_inform("CLASS: attaching categories to class '%s' %s",
                          cls->nameForLogging(), isMeta ? "(meta)" : "");
         }
         
-        attachCategories(cls, cats, true /*flush caches*/);
+        //将分类中的方法列表、属性列表和协议列表添加到类；并清空方法缓存
+        attachCategories(cls, cats, true);
         free(cats);
     }
 }
@@ -905,20 +906,19 @@ static char *copySwiftV1MangledName(const char *string, bool isProtocol = false)
 
 /***********************************************************************
  * getClass
- * Looks up a class by name. The class MIGHT NOT be realized.
- * Demangled Swift names are recognized.
+ * 按名称查找类；该类可能无法实现。
+ * Decengled Swift 名称可以被识别。
  * Locking: runtimeLock must be read- or write-locked by the caller.
  **********************************************************************/
 
-// This is a misnomer: gdb_objc_realized_classes is actually a list of
-// named classes not in the dyld shared cache, whether realized or not.
+// 这是一个misnomer: gdb_objc_implemzed_classes 实际上是一个不在dyld共享缓存中的命名类列表，不管是否实现。
 NXMapTable *gdb_objc_realized_classes;  // exported for debuggers in objc-gdb.h
 
 static Class getClass_impl(const char *name)
 {
     runtimeLock.assertLocked();
     
-    // allocated in _read_images
+    // 在 _read_images 中分配
     assert(gdb_objc_realized_classes);
     
     // Try runtime-allocated table
@@ -1409,8 +1409,7 @@ Class _class_getNonMetaClass(Class cls, id obj)
 
 
 /***********************************************************************
- * addSubclass
- * Adds subcls as a subclass of supercls.
+ * addSubclass() 函数：将指定类添加到它的父类的子类列表
  * Locking: runtimeLock must be held by the caller.
  **********************************************************************/
 static void addSubclass(Class supercls, Class subcls)
@@ -1846,8 +1845,7 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
 
 
 /***********************************************************************
- * 实现一个类
- * 对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
+ * 实现一个类：对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
  * Locking: runtimeLock must be write-locked by the caller
  **********************************************************************/
 static Class realizeClass(Class cls)
@@ -1860,20 +1858,20 @@ static Class realizeClass(Class cls)
     Class metacls;
     bool isMeta;
     
-    if (!cls) return nil;
-    if (cls->isRealized()) return cls;
-    assert(cls == remapClass(cls));
+    if (!cls) return nil;//如果传入的类为 nil ，则直接返回 nil
+    if (cls->isRealized()) return cls;//如果传入的类已实现，则返回该类
+    assert(cls == remapClass(cls));//如果重新映射后不相等，抛出异常
     
     // fixme verify class is not in an un-dlopened part of the shared cache?
     
     ro = (const class_ro_t *)cls->data();
     if (ro->flags & RO_FUTURE) {
-        // This was a future class. rw data is already allocated.
+        ////未实现的future; rw数据已经分配。
         rw = cls->data();
         ro = cls->data()->ro;
         cls->changeInfo(RW_REALIZED|RW_REALIZING, RW_FUTURE);
     } else {
-        // Normal class. Allocate writeable class data.
+        //正常的类：分配可写类数据。
         rw = (class_rw_t *)calloc(sizeof(class_rw_t), 1);
         rw->ro = ro;
         rw->flags = RW_REALIZED|RW_REALIZING;
@@ -1890,23 +1888,22 @@ static Class realizeClass(Class cls)
                      (void*)cls, ro);
     }
     
-    // Realize superclass and metaclass, if they aren't already.
-    // This needs to be done after RW_REALIZED is set above, for root classes.
+    // 如果父类和元类还没有实现，则实现它们。
+    // 对于根类，需要在上面设置 RW_REALIZED 之后执行此操作。
     supercls = realizeClass(remapClass(cls->superclass));
     metacls = realizeClass(remapClass(cls->ISA()));
     
-    // Update superclass and metaclass in case of remapping
+    // 在重新映射的情况下更新父类和元类
     cls->superclass = supercls;
     cls->initClassIsa(metacls);
     
-    // Reconcile instance variable offsets / layout.
-    // This may reallocate class_ro_t, updating our ro variable.
+    // 协调实例变量偏移量/布局: 这可能会重新分配 class_ro_t ，更新 ro 变量。
     if (supercls  &&  !isMeta) reconcileInstanceVariables(cls, supercls, ro);
     
     // Set fastInstanceSize if it wasn't set already.
     cls->setInstanceSize(ro->instanceSize);
     
-    // Copy some flags from ro to rw
+    // 将一些标志从 ro 复制到 rw
     if (ro->flags & RO_HAS_CXX_STRUCTORS) {
         cls->setHasCxxDtor();
         if (! (ro->flags & RO_HAS_CXX_DTOR_ONLY)) {
@@ -1914,7 +1911,7 @@ static Class realizeClass(Class cls)
         }
     }
     
-    // Disable non-pointer isa for some classes and/or platforms.
+    // 禁用某些类和/或平台的非指针isa。
 #if SUPPORT_NONPOINTER_ISA
     {
         bool disable = false;
@@ -1938,12 +1935,12 @@ static Class realizeClass(Class cls)
     }
 #endif
     
-    // Connect this class to its superclass's subclass lists
+    // 将这个类连接到它的父类的子类列表
     if (supercls) {
         addSubclass(supercls, cls);
     }
     
-    // Attach categories
+    // 附加 categories
     methodizeClass(cls);
     
     if (!isMeta) {
@@ -2815,23 +2812,27 @@ hIndex++
 
 
 /***********************************************************************
- * prepare_load_methods
- * Schedule +load for classes in this image, any un-+load-ed
- * superclasses in other images, and any categories in this image.
+ * prepare_load_methods 准备加载方法
+ * 调度该镜像中类的 +load方 法、其他镜像中的任何未加载的父类和此映像中的任何类别。
+ * 调度 +load 此图像中的类，其他图像中的任何未加载的超类，以及此图像中的任何类别。
+ * Schedule +load for classes in this image, any un-+load-ed superclasses in other images, and any categories in this image.
  **********************************************************************/
-// Recursively schedule +load for cls and any un-+load-ed superclasses.
-// cls must already be connected.
-static void schedule_class_load(Class cls)
-{
+// 递归调用 cls 和任何未加载的父类的 +load。
+// @param cls必须已经关联。
+static void schedule_class_load(Class cls){
     if (!cls) return;
     assert(cls->isRealized());  // _read_images should realize
     
+    // 已经添加Class的 +load 方法到调用列表中
     if (cls->data()->flags & RW_LOADED) return;
     
-    // Ensure superclass-first ordering
+    // 确保 super 已经被添加到 +load 列表中，默认是整个继承者链的顺序
     schedule_class_load(cls->superclass);
     
+    // 将IMP和Class添加到调用列表
     add_class_to_loadable_list(cls);
+    
+    // 设置Class的flags，表示已经添加Class到调用列表中
     cls->setInfo(RW_LOADED);
 }
 
@@ -2843,14 +2844,16 @@ bool hasLoadMethods(const headerType *mhdr){
     return false;
 }
 
-void prepare_load_methods(const headerType *mhdr)
-{
+/* 准备加载方法
+ * @param mhdr 对于 64 位体系结构，64 位 mach 头出现在目标文件的最开头。
+ */
+void prepare_load_methods(const headerType *mhdr){
     size_t count, i;
     
     runtimeLock.assertWriting();
     
-    classref_t *classlist =
-    _getObjc2NonlazyClassList(mhdr, &count);
+    //获取到非懒加载的类的列表
+    classref_t *classlist = _getObjc2NonlazyClassList(mhdr, &count);
     for (i = 0; i < count; i++) {
         schedule_class_load(remapClass(classlist[i]));
     }
@@ -4163,27 +4166,34 @@ class_copyPropertyList(Class cls, unsigned int *outCount)
 }
 
 
-/***********************************************************************
- * objc_class::getLoadMethod
- * 仅从 add_class_to_loadable_list() 函数调用。
- * 锁定:调用者必须读或写锁定runtimeLock。
- **********************************************************************/
+/* 该函数获取指定类的 +load 方法的 IMP
+ * @note 调用该方法的前提条件：
+ *        1、该类已经实现了 ；
+ *        2、该类所属的类也已经实现；
+ *        3、该类不是元类
+ *        4、该类所属的类是元类
+ *      如果不满足以上四个条件，则断言失败，终止程序；
+ *
+ * @note 该函数仅被 add_class_to_loadable_list() 函数调用。
+ */
 IMP objc_class::getLoadMethod(){
     
     runtimeLock.assertLocked();
     
     const method_list_t *mlist;
     
-    assert(isRealized());
-    assert(ISA()->isRealized());
-    assert(!isMetaClass());//是否是元类
-    assert(ISA()->isMetaClass());//isa 是否是元类
+    //几个必须满足的条件
+    assert(isRealized());//该类已经实现了
+    assert(ISA()->isRealized());//该类所属的类也已经实现
+    assert(!isMetaClass());//该类不是元类
+    assert(ISA()->isMetaClass());//该类所属的类是元类
     
-    mlist = ISA()->data()->ro->baseMethods();
+    mlist = ISA()->data()->ro->baseMethods();//类的基础方法列表
     if (mlist) {
         for (const auto& meth : *mlist) {
             const char *name = sel_cname(meth.name);
             if (0 == strcmp(name, "load")) {
+                //strcmp() 函数进行字符串比较，如果相等返回 0
                 return meth.imp;
             }
         }

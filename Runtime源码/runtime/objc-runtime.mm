@@ -1,25 +1,3 @@
-/*
- * Copyright (c) 1999-2007 Apple Inc.  All Rights Reserved.
- * 
- * @APPLE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- */
 /***********************************************************************
 * objc-runtime.m
 * Copyright 1988-1996, NeXT Software, Inc.
@@ -63,12 +41,12 @@ const option_t Settings[] = {
 };
 
 
-// objc's key for pthread_getspecific
+// objc的 pthread_getspecific 键
 static tls_key_t _objc_pthread_key;
 
-// Selectors
-SEL SEL_load = NULL;
-SEL SEL_initialize = NULL;
+// 选择器
+SEL SEL_load = NULL;// +load 方法的选择器
+SEL SEL_initialize = NULL;// +initialize 方法的选择器
 SEL SEL_resolveInstanceMethod = NULL;
 SEL SEL_resolveClassMethod = NULL;
 SEL SEL_cxx_construct = NULL;
@@ -90,18 +68,19 @@ SEL SEL_retainWeakReference = NULL;
 SEL SEL_allowsWeakReference = NULL;
 
 
-header_info *FirstHeader = 0;  // NULL means empty list
-header_info *LastHeader  = 0;  // NULL means invalid; recompute it
+header_info *FirstHeader = 0;  // NULL表示空列表
+header_info *LastHeader  = 0;  // NULL意味着无效;再计算它
 int HeaderCount = 0;
 
 
-/***********************************************************************
-* 根据指定名称返回一个类。
-* 如果该类不存在,调用 _objc_classLoader() 函数，然后调用objc_classHandler() 函数，两者都可以创建一个新类。
-* Warning: 如果aClassName是为类的 isa 设置的名称，则无法执行!
-**********************************************************************/
-Class objc_getClass(const char *aClassName)
-{
+
+/* 获取指定名称的类：如果该类不存在,调用 _objc_classLoader() 函数，然后调用objc_classHandler() 函数，两者都可以创建一个新类。
+ * @param name 要查找的类的名称。
+ * @return 返回指定名称的类，如果类没有在Objective-C运行时注册，则返回 nil。
+ * @note objc_getClass() 与objc_lookUpClass() 的不同之处在于，如果类没有注册，objc_getClass() 将调用类处理程序回调，然后再次检查类是否注册。objc_lookUpClass() 不调用类处理程序回调。
+ * Warning: 如果aClassName是为类的 isa 设置的名称，则无法执行!
+ */
+Class objc_getClass(const char *aClassName){
     if (!aClassName) return Nil;
     // NO unconnected, YES class handler
     return look_up_class(aClassName, NO, YES);
@@ -113,9 +92,9 @@ Class objc_getClass(const char *aClassName)
 * 如果返回值为空，则杀死该程序；
 * 这是由ZeroLink使用的，在没有ZeroLink的情况下，无法找到类将是编译时链接错误。
 **********************************************************************/
-Class objc_getRequiredClass(const char *aClassName)
-{
+Class objc_getRequiredClass(const char *aClassName){
     Class cls = objc_getClass(aClassName);
+    //_objc_fatal() 函数处理严重的运行时错误：比如不能读取 mach 头文件，不能分配空间等等；会终止程序
     if (!cls) _objc_fatal("link error: class '%s' not found.", aClassName);
     return cls;
 }
@@ -126,8 +105,7 @@ Class objc_getRequiredClass(const char *aClassName)
 * 如果该类不存在, 调用_objc_classLoader() 函数，它可以创建一个新类。
 * Formerly objc_getClassWithoutWarning ()
 **********************************************************************/
-Class objc_lookUpClass(const char *aClassName)
-{
+Class objc_lookUpClass(const char *aClassName){
     if (!aClassName) return Nil;
 
     // NO unconnected, NO class handler
@@ -143,16 +121,13 @@ Class objc_lookUpClass(const char *aClassName)
 Class objc_getMetaClass(const char *aClassName)
 {
     Class cls;
-
     if (!aClassName) return Nil;
-
     cls = objc_getClass (aClassName);
-    if (!cls)
-    {
+    if (!cls){
+        // _objc_inform() 将错误信息打印到控制台；不会终止程序
         _objc_inform ("class `%s' not linked into application", aClassName);
         return Nil;
     }
-
     return cls->ISA();
 }
 
