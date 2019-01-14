@@ -2174,6 +2174,7 @@ load_images(enum dyld_image_states state, uint32_t infoCount,
             break;
         }
     }
+    //如果没有发现 +load 方法，则返回 nil
     if (!found) return nil;
     
     recursive_mutex_locker_t lock(loadMethodLock);
@@ -2834,9 +2835,8 @@ static void schedule_class_load(Class cls)
     cls->setInfo(RW_LOADED);
 }
 
-// Quick scan for +load methods that doesn't take a lock.
-bool hasLoadMethods(const headerType *mhdr)
-{
+//是否加载了 +load方法
+bool hasLoadMethods(const headerType *mhdr){
     size_t count;
     if (_getObjc2NonlazyClassList(mhdr, &count)  &&  count > 0) return true;
     if (_getObjc2NonlazyCategoryList(mhdr, &count)  &&  count > 0) return true;
