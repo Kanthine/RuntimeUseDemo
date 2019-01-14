@@ -32,8 +32,13 @@
 
 #include <mach-o/loader.h>
 
-/* dynamically loading Mach-O object files that contain Objective-C code */
+// 动态加载包含 Objective-C 代码的 Mach-O 对象文件
 
+/* 动态加载
+ * OC提供了objc_loadModules运行时函数，执行Mach-O中模块的动态加载
+ * 在上层NSBundle对象提供了更简单的访问API。
+ *
+ */
 OBJC_EXPORT long objc_loadModules (
 	char *modlist[], 
 	void *errStream,

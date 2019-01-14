@@ -34528,11 +34528,12 @@ static struct /*_protocol_list_t*/ {
 static struct /*_prop_list_t*/ {
     unsigned int entsize;  // sizeof(struct _prop_t)
     unsigned int count_of_properties;
-    struct _prop_t prop_list[1];
+    struct _prop_t prop_list[2];
 } _OBJC_$_PROP_LIST_SuperModel_$_Test __attribute__ ((used, section ("__DATA,__objc_const"))) = {
     sizeof(_prop_t),
-    1,
-    {{"nickName","T@\"NSString\",&,N"}}
+    2,
+    {{"nickName","T@\"NSString\",&,N"}},
+    {"age","T@\"NSString\",&,N"}}
 };
 
 extern "C" __declspec(dllexport) struct _class_t OBJC_CLASS_$_SuperModel;

@@ -42,37 +42,50 @@
 __BEGIN_DECLS
 
 /*************************************************************************
- *	Hash tables of arbitrary data
+ *  Objective-C 哈希表，也就是 NXHashTable
  *************************************************************************/
 
-/* This module allows hashing of arbitrary data.  Such data must be pointers or integers, and client is responsible for allocating/deallocating this data.  A deallocation call-back is provided.
-The objective C class HashTable is preferred when dealing with (key, values) associations because it is easier to use in that situation.
-As well-behaved scalable data structures, hash tables double in size when they start becoming full, thus guaranteeing both average constant time access and linear size. */
+/*
+ 这个模块允许存储任意数据。这些数据必须是指针或整数，客户端负责分配/释放这些数据。提供了一个deallocation回调。
+ 在处理(键、值)关联时，Objective-C 类 HashTable 是首选的，因为它在这种情况下更容易使用。
+ 作为表现良好的可扩展数据结构，哈希表在开始变满时会增加一倍，从而保证平均恒定时间访问和线性大小。
+ 
+ NSHashTable 是可变的，它没有不可变版本。
+ 它可以持有元素的弱引用，而且在对象被销毁后能正确地将其移除。而这一点在NSSet是做不到的。
+ 它的成员可以在添加时被拷贝。
+ 它的成员可以使用指针来标识是否相等及做hash检测。
+ 它可以包含任意指针，其成员没有限制为对象。我们可以配置一个NSHashTable实例来操作任意的指针，而不仅仅是对象。
+ 
+ 
+ NXHashTable 的应用：在整个 objc/runtime 中，作为私有的数据结构 NXHashTable，直接使用了它的就是存储所有类或者元类的哈希表（在这里会忽略对元类的存储，因为实现几乎完全相同）：
+ */
 
+
+//NXHashTablePrototype 存储了一些构建哈希表必要的函数指针如：hash、isEqual 和 free 的函数指针
 typedef struct {
-    uintptr_t	(*hash)(const void *info, const void *data);
-    int		(*isEqual)(const void *info, const void *data1, const void *data2);
-    void	(*free)(const void *info, void *data);
+    uintptr_t	(*hash)(const void *info, const void *data);//用于获取数据的哈希的函数地址
+    int		(*isEqual)(const void *info, const void *data1, const void *data2);//判断两个数据是否相等的函数地址
+    void	(*free)(const void *info, void *data);//释放数据的函数地址
     int		style; /* reserved for future expansion; currently 0 */
     } NXHashTablePrototype;
     
 /* the info argument allows a certain generality, such as freeing according to some owner information */
 /* invariants assumed by the implementation: 
 	1 - data1 = data2 => hash(data1) = hash(data2)
-	    when data varies over time, hash(data) must remain invariant
-		    e.g. if data hashes over a string key, the string must not be changed
-	2- isEqual (data1, data2) => data1= data2
+    当数据变化随着时间的推移,散列(数据)必须保持不变；例如,如果数据散列在一个字符串键,字符串不能被改变
+    2- isEqual (data1, data2) => data1= data2
  */
 
 typedef struct {
     const NXHashTablePrototype	*prototype OBJC_HASH_AVAILABILITY;
     unsigned			count OBJC_HASH_AVAILABILITY;
     unsigned			nbBuckets OBJC_HASH_AVAILABILITY;
-    void			*buckets OBJC_HASH_AVAILABILITY;
+    void			*buckets OBJC_HASH_AVAILABILITY;//真正用来存储数据的数组。
     const void			*info OBJC_HASH_AVAILABILITY;
    } NXHashTable OBJC_HASH_AVAILABILITY;
     /* private data structure; may change */
-    
+
+//哈希表 NXHashTable 使用 NXCreateHashTableFromZone() 函数初始化：
 OBJC_EXPORT NXHashTable *NXCreateHashTableFromZone (NXHashTablePrototype prototype, unsigned capacity, const void *info, void *z) OBJC_HASH_AVAILABILITY;
 OBJC_EXPORT NXHashTable *NXCreateHashTable (NXHashTablePrototype prototype, unsigned capacity, const void *info) OBJC_HASH_AVAILABILITY;
     /* if hash is 0, pointer hash is assumed */
@@ -125,6 +138,7 @@ OBJC_EXPORT void *NXHashInsertIfAbsent (NXHashTable *table, const void *data) OB
     /* If data already in table, returns the one in table
     else adds argument to table and returns argument. */
 
+//移除哈希表中的某个数据
 OBJC_EXPORT void *NXHashRemove (NXHashTable *table, const void *data) OBJC_HASH_AVAILABILITY;
     /* previous data or NULL is returned */
 	
@@ -137,8 +151,9 @@ OBJC_EXPORT void *NXHashRemove (NXHashTable *table, const void *data) OBJC_HASH_
     }
 */
 
+//在将元素重新插入到哈希表中涉及了一个非常奇怪的结构体 NXHashState，这个结构体主要作用是遍历 NXHashTable 中的元素。
 typedef struct {int i; int j;} NXHashState OBJC_HASH_AVAILABILITY;
-    /* callers should not rely on actual contents of the struct */
+    /* 调用者不应该依赖于结构的实际内容 */
 
 OBJC_EXPORT NXHashState NXInitHashState(NXHashTable *table) OBJC_HASH_AVAILABILITY;
 

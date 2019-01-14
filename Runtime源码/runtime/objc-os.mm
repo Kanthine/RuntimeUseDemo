@@ -678,7 +678,7 @@ map_images_nolock(enum dyld_image_states state, uint32_t infoCount,
         arr_init();
     }
 
-    // 从 headerList 开始对链表中的头文件执行初始处理。
+    //核心函数_read_images() : 从 headerList 开始对链表中的头文件执行初始处理。
     _read_images(hList, hCount);
 
     firstTime = NO;
@@ -817,6 +817,7 @@ void _objc_init(void)
     
     // 首先注册unmap，以防某些 +load 取消映射
     _dyld_register_func_for_remove_image(&unmap_image);
+    //map_2_images() 函数是初始化的关键，内部完成了大量 Runtime 环境的初始化操作。
     dyld_register_image_state_change_handler(dyld_image_state_bound,
                                              1/*batch*/, &map_2_images);
     dyld_register_image_state_change_handler(dyld_image_state_dependents_initialized, 0/*not batch*/, &load_images);

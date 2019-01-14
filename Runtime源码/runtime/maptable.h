@@ -41,9 +41,14 @@ __BEGIN_DECLS
 
 /***************	Definitions		***************/
 
-    /* This module allows hashing of arbitrary associations [key -> value].  Keys and values must be pointers or integers, and client is responsible for allocating/deallocating this data.  A deallocation call-back is provided.
-    NX_MAPNOTAKEY (-1) is used internally as a marker, and therefore keys must always be different from -1.
-    As well-behaved scalable data structures, hash tables double in size when they start becoming full, thus guaranteeing both average constant time access and linear size. */
+/*
+ 这个模块存储任意关联[key ->value]。键和值必须是指针或整数，客户端负责分配/释放这些数据。提供了一个deallocation回调。
+ NX_MAPNOTAKEY(-1)在内部用作标记，因此键必须始终与-1不同。
+作为表现良好的可扩展数据结构，哈希表在开始变满时会增加一倍，从而保证了平均固定时间访问和线性大小。
+ 
+NSMapTable是可变的；可以通过弱引用来持有keys和values，所以当key或者value被deallocated的时候，所存储的实体也会被移除；NSMapTable可以在添加value的时候对value进行复制；
+和NSHashTable类似，NSMapTable可以随意的存储指针，并且利用指针的唯一性来进行对比和重复检查。
+ */
 
 typedef struct _NXMapTable {
     /* private data structure; may change */
@@ -53,29 +58,31 @@ typedef struct _NXMapTable {
     void	*buckets;
 } NXMapTable OBJC_MAP_AVAILABILITY;
 
+//_NXMapTablePrototype 存储了一些构建哈希表必要的函数指针如：hash、isEqual 和 free 的函数指针
 typedef struct _NXMapTablePrototype {
-    unsigned	(*hash)(NXMapTable *, const void *key);
-    int		(*isEqual)(NXMapTable *, const void *key1, const void *key2);
-    void	(*free)(NXMapTable *, void *key, void *value);
+    unsigned	(*hash)(NXMapTable *, const void *key);//用于获取数据的哈希的函数地址
+    int		(*isEqual)(NXMapTable *, const void *key1, const void *key2);//判断两个数据是否相等的函数地址
+    void	(*free)(NXMapTable *, void *key, void *value);//释放数据的函数地址
     int		style; /* reserved for future expansion; currently 0 */
 } NXMapTablePrototype OBJC_MAP_AVAILABILITY;
-    
+
     /* invariants assumed by the implementation: 
 	A - key != -1
 	B - key1 == key2 => hash(key1) == hash(key2)
-	    when key varies over time, hash(key) must remain invariant
-	    e.g. if string key, the string must not be changed
+     当键随时间变化时，哈希(键)必须保持不变；例如:如果是字符串键，就不能改变字符串
 	C - isEqual(key1, key2) => key1 == key2
     */
 
+//NX_MAPNOTAKEY(-1)在内部用作标记，因此键必须始终与-1不同。
 #define NX_MAPNOTAKEY	((void *)(-1))
 
 /***************	Functions		***************/
-
+//哈希表 NXMapTable 使用 NXCreateMapTableFromZone() 函数初始化：
 OBJC_EXPORT NXMapTable *NXCreateMapTableFromZone(NXMapTablePrototype prototype, unsigned capacity, void *z) OBJC_MAP_AVAILABILITY;
 OBJC_EXPORT NXMapTable *NXCreateMapTable(NXMapTablePrototype prototype, unsigned capacity) OBJC_MAP_AVAILABILITY;
     /* capacity is only a hint; 0 creates a small table */
 
+//释放哈希表 NXMapTable
 OBJC_EXPORT void NXFreeMapTable(NXMapTable *table) OBJC_MAP_AVAILABILITY;
     /* call free for each pair, and recovers table */
 	

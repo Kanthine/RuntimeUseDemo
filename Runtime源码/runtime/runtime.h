@@ -242,100 +242,57 @@ OBJC_EXPORT Ivar object_getInstanceVariable(id obj, const char *name, void **out
 
 /* Obtaining Class Definitions */
 
-/** 
- * Returns the class definition of a specified class.
- * 
- * @param name The name of the class to look up.
- * 
- * @return The Class object for the named class, or \c nil
- *  if the class is not registered with the Objective-C runtime.
- * 
- * @note \c objc_getClass is different from \c objc_lookUpClass in that if the class
- *  is not registered, \c objc_getClass calls the class handler callback and then checks
- *  a second time to see whether the class is registered. \c objc_lookUpClass does 
- *  not call the class handler callback.
- * 
- * @warning Earlier implementations of this function (prior to OS X v10.0)
- *  terminate the program if the class does not exist.
+/* 获取指定名称的类
+ * @param name 要查找的类的名称。
+ * @return 返回指定名称的类，如果类没有在Objective-C运行时注册，则返回 nil。
+ * @note objc_getClass() 与objc_lookUpClass() 的不同之处在于，如果类没有注册，objc_getClass() 将调用类处理程序回调，然后再次检查类是否注册。objc_lookUpClass() 不调用类处理程序回调。
  */
 OBJC_EXPORT Class objc_getClass(const char *name)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-/** 
- * Returns the metaclass definition of a specified class.
- * 
- * @param name The name of the class to look up.
- * 
- * @return The \c Class object for the metaclass of the named class, or \c nil if the class
- *  is not registered with the Objective-C runtime.
- * 
- * @note If the definition for the named class is not registered, this function calls the class handler
- *  callback and then checks a second time to see if the class is registered. However, every class
- *  definition must have a valid metaclass definition, and so the metaclass definition is always returned,
- *  whether it’s valid or not.
+/* 获取指定名称的类的元类
+ * @param name 要查找的类的名称。
+ * @return  返回指定名称的类的元类，如果类没有在Objective-C运行时注册，则返回 nil。
+ * @note 如果命名类的定义未注册，则此函数调用类处理程序回调，然后再次检查类是否注册。但是，每个类定义都必须有一个有效的元类定义，因此无论元类定义是否有效，它总是返回。
  */
 OBJC_EXPORT Class objc_getMetaClass(const char *name)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-/** 
- * Returns the class definition of a specified class.
- * 
- * @param name The name of the class to look up.
- * 
- * @return The Class object for the named class, or \c nil if the class
- *  is not registered with the Objective-C runtime.
- * 
- * @note \c objc_getClass is different from this function in that if the class is not
- *  registered, \c objc_getClass calls the class handler callback and then checks a second
- *  time to see whether the class is registered. This function does not call the class handler callback.
+/* 获取指定名称的类
+ * @param name 要查找的类的名称。
+ * @return 返回指定名称的类；如果类没有在Objective-C运行时注册，则返回 nil。
+ * @note objc_getClass() 与这个函数的不同之处在于，如果类没有注册，objc_getClass() 将调用类处理程序回调函数，然后第二次检查类是否注册。这个函数不调用类处理程序回调。
  */
 OBJC_EXPORT Class objc_lookUpClass(const char *name)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-/** 
- * Returns the class definition of a specified class.
- * 
- * @param name The name of the class to look up.
- * 
- * @return The Class object for the named class.
- * 
- * @note This function is the same as \c objc_getClass, but kills the process if the class is not found.
- * @note This function is used by ZeroLink, where failing to find a class would be a compile-time link error without ZeroLink.
+/* 获取指定名称的类
+ * @param name 要查找的类的名称。
+ * @return 返回指定名称的类
+ * @note 这个函数与 objc_getClass() 相同，但是如果没有找到该类，就会终止进程。
+ * @note 此函数由 ZeroLink 使用，如果没有 ZeroLink，则无法找到类将是编译时链接错误。
  */
 OBJC_EXPORT Class objc_getRequiredClass(const char *name)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-/** 
- * Obtains the list of registered class definitions.
- * 
- * @param buffer An array of \c Class values. On output, each \c Class value points to
- *  one class definition, up to either \e bufferCount or the total number of registered classes,
- *  whichever is less. You can pass \c NULL to obtain the total number of registered class
- *  definitions without actually retrieving any class definitions.
- * @param bufferCount An integer value. Pass the number of pointers for which you have allocated space
- *  in \e buffer. On return, this function fills in only this number of elements. If this number is less
- *  than the number of registered classes, this function returns an arbitrary subset of the registered classes.
- * 
- * @return An integer value indicating the total number of registered classes.
- * 
- * @note The Objective-C runtime library automatically registers all the classes defined in your source code.
- *  You can create class definitions at runtime and register them with the \c objc_addClass function.
- * 
- * @warning You cannot assume that class objects you get from this function are classes that inherit from \c NSObject,
- *  so you cannot safely call any methods on such classes without detecting that the method is implemented first.
+/* 获取指定数量的已注册类，获取的类列表为任意子集。
+ * @param buffer 用于写入已注册类集的缓存；最多有 bufferCount 或注册类的总数量(以较少者为准)。
+ *               可以传递NULL来获取注册类定义的总数：
+ * @param bufferCount 指定获取类的数量；
+ * @return 返回已注册类的总数量。
+ * @note  该次函数执行 objc_getClassList(NULL, 0) 获取所有已注册类的总数量；
+ * @note Objective-C 运行库自动注册在源代码中定义的所有类；
+ *       可以在运行时创建类定义，并将它们注册到objc_addClass() 函数中。
+ * @warning 该函数中获得的类的父类可能是任意类；因此如果不首先检测方法的实现，就不能安全地调用这些类上的任何方法。
  */
 OBJC_EXPORT int objc_getClassList(Class *buffer, int bufferCount)
     __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_2_0);
 
-/** 
- * Creates and returns a list of pointers to all registered class definitions.
- * 
- * @param outCount An integer pointer used to store the number of classes returned by
- *  this function in the list. It can be \c nil.
- * 
- * @return A nil terminated array of classes. It must be freed with \c free().
- * 
- * @see objc_getClassList
+/* 获取所有已注册类的指针列表。
+ * @param outCount 所有已注册类数量
+ * @note 该函数与 objc_getClassList() 函数区别在于：
+ *       该函数只能获取所有已注册的类；但是用法简单
+ *       objc_getClassList() 函数可以获取指定数量的任意集合类；用法稍微复杂些；
  */
 OBJC_EXPORT Class *objc_copyClassList(unsigned int *outCount)
      __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_3_1);

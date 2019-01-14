@@ -348,8 +348,8 @@ __BEGIN_DECLS
 #define _objcHeaderOptimizedByDyld(h)  ((h)->info  &&  ((h)->info->flags & OBJC_IMAGE_OPTIMIZED_BY_DYLD))
 
 /* OBJC_IMAGE_OPTIMIZED_BY_DYLD:
-   Assorted metadata precooked in the dyld shared cache.
-   Never set for images outside the shared cache file itself.
+ 在dyld共享缓存中预先处理的各种元数据。
+ 永远不要为共享缓存文件本身之外的images设置。
 */
    
 

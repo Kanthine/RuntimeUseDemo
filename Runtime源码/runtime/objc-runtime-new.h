@@ -1249,12 +1249,12 @@ struct swift_class_t : objc_class {
 
 
 struct category_t {
-    const char *name;
-    classref_t cls;
-    struct method_list_t *instanceMethods;//分类的实例方法列表
-    struct method_list_t *classMethods;//分类的类方法列表
-    struct protocol_list_t *protocols;
-    struct property_list_t *instanceProperties;
+    const char *name;//分类所属的类的名称
+    classref_t cls;//分类所属的类
+    struct method_list_t *instanceMethods;//分类里添加的实例方法列表
+    struct method_list_t *classMethods;//分类添加的类方法列表
+    struct protocol_list_t *protocols;//分类实现的协议列表
+    struct property_list_t *instanceProperties;//分类添加的实例属性列表
 
     method_list_t *methodsForMeta(bool isMeta) {
         if (isMeta) return classMethods;

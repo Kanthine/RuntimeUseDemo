@@ -175,6 +175,8 @@ void drinkingMethodIMP(id self ,SEL _cmd){
 
 @implementation SuperModel (Test)
 
+
+
 - (void)logNickName{
     NSLog(@"class_getName  ==== %s",class_getName(self.class));
 }
