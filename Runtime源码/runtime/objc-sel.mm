@@ -1,26 +1,3 @@
-/*
- * Copyright (c) 2012 Apple Inc.  All Rights Reserved.
- * 
- * @APPLE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- */
-
 #if __OBJC2__
 
 #include "objc-private.h"
@@ -36,21 +13,20 @@ static const objc_selopt_t *builtins = NULL;
 
 
 static size_t SelrefCount = 0;
-
+//选择器名称的哈希表：关系映射表
 static NXMapTable *namedSelectors;
 
 static SEL search_builtins(const char *key);
 
 
-/***********************************************************************
+/*
 * sel_init
 * Initialize selector tables and register selectors used internally.
-**********************************************************************/
-void sel_init(bool wantsGC, size_t selrefCount)
-{
+*/
+void sel_init(bool wantsGC, size_t selrefCount){
     // save this value for later
     SelrefCount = selrefCount;
-
+    
 #if SUPPORT_PREOPT
     builtins = preoptimizedSelectors();
 
@@ -60,9 +36,7 @@ void sel_init(bool wantsGC, size_t selrefCount)
         
         _objc_inform("PREOPTIMIZATION: using selopt at %p", builtins);
         _objc_inform("PREOPTIMIZATION: %u selectors", occupied);
-        _objc_inform("PREOPTIMIZATION: %u/%u (%u%%) hash table occupancy",
-                     occupied, capacity,
-                     (unsigned)(occupied/(double)capacity*100));
+        _objc_inform("PREOPTIMIZATION: %u/%u (%u%%) hash table occupancy", occupied, capacity,(unsigned)(occupied/(double)capacity*100));
         }
 #endif
 
@@ -107,9 +81,10 @@ void sel_init(bool wantsGC, size_t selrefCount)
 #undef t
 }
 
-
-static SEL sel_alloc(const char *name, bool copy)
-{
+/* 根据选择器名称创建一个选择器
+ * @param copy 是否拷贝选择器名称
+ */
+static SEL sel_alloc(const char *name, bool copy){
     selLock.assertWriting();
     return (SEL)(copy ? strdup(name) : name);    
 }
@@ -146,9 +121,14 @@ static SEL search_builtins(const char *name)
     return nil;
 }
 
-
-static SEL __sel_registerName(const char *name, int lock, int copy) 
-{
+/* 向Objective-C运行时系统注册一个方法，将方法名映射到选择器，并返回选择器值。
+ * @param name 指向 C 字符串的指针,表示传递要注册的方法的名称。
+ * @param lock 布尔值，指示该函数内部是否上锁
+ * @param copy 是否拷贝选择器名称
+ * @note 在将方法添加到类定义之前，必须向Objective-C运行时系统注册方法名，以获得方法的选择器。
+ *       如果方法名已经注册，则该函数只返回选择器。
+ */
+static SEL __sel_registerName(const char *name, int lock, int copy) {
     SEL result = 0;
 
     if (lock) selLock.assertUnlocked();
@@ -160,7 +140,7 @@ static SEL __sel_registerName(const char *name, int lock, int copy)
     if (result) return result;
     
     if (lock) selLock.read();
-    if (namedSelectors) {
+    if (namedSelectors) {//如果在哈比表中找到该选择器，则返回
         result = (SEL)NXMapGet(namedSelectors, name);
     }
     if (lock) selLock.unlockRead();
@@ -170,17 +150,16 @@ static SEL __sel_registerName(const char *name, int lock, int copy)
 
     if (lock) selLock.write();
 
-    if (!namedSelectors) {
-        namedSelectors = NXCreateMapTable(NXStrValueMapPrototype, 
-                                          (unsigned)SelrefCount);
+    if (!namedSelectors) {//如果哈希表还没有创建，则创建一个哈希表
+        namedSelectors = NXCreateMapTable(NXStrValueMapPrototype, (unsigned)SelrefCount);
     }
     if (lock) {
-        // Rescan in case it was added while we dropped the lock
+        // 重新扫描，以防它是在我们删除锁时添加的
         result = (SEL)NXMapGet(namedSelectors, name);
     }
     if (!result) {
+        //创建一个选择器，并将创建的选择器插入哈希表 namedSelectors
         result = sel_alloc(name, copy);
-        // fixme choose a better container (hash not map for starters)
         NXMapInsert(namedSelectors, sel_getName(result), result);
     }
 
@@ -188,11 +167,21 @@ static SEL __sel_registerName(const char *name, int lock, int copy)
     return result;
 }
 
-
+/* 向Objective-C运行时系统注册一个方法，将方法名映射到选择器，并返回选择器值。
+ * @param 指向 C 字符串的指针,表示传递要注册的方法的名称。
+ * @note 在将方法添加到类定义之前，必须向Objective-C运行时系统注册方法名，以获得方法的选择器。
+ *       如果方法名已经注册，则该函数只返回选择器。
+ */
 SEL sel_registerName(const char *name) {
     return __sel_registerName(name, 1, 1);     // YES lock, YES copy
 }
 
+/* 向Objective-C运行时系统注册一个方法，将方法名映射到选择器，并返回选择器值。
+ * @param name 指向 C 字符串的指针,表示传递要注册的方法的名称。
+ * @param copy 是否复制选择器名称 name（没有创建sel调用sel_alloc()时使用）
+ * @note 在将方法添加到类定义之前，必须向Objective-C运行时系统注册方法名，以获得方法的选择器。
+ *       如果方法名已经注册，则该函数只返回选择器。
+ */
 SEL sel_registerNameNoLock(const char *name, bool copy) {
     return __sel_registerName(name, 0, copy);  // NO lock, maybe copy
 }
@@ -209,14 +198,18 @@ void sel_unlock(void)
 
 
 // 2001/1/24
-// the majority of uses of this function (which used to return NULL if not found)
-// did not check for NULL, so, in fact, never return NULL
-//
+// 这个函数的大多数用法(如果没有找到，通常返回NULL)都没有检查NULL，因此，实际上，永远不会返回NULL
+
+/* 向Objective-C运行时系统注册一个方法名。
+ * @param 指向 C 字符串的指针,表示传递要注册的方法的名称。
+ * @note 该方法的实现与sel_registerName的实现相同。
+ */
 SEL sel_getUid(const char *name) {
     return __sel_registerName(name, 2, 1);  // YES lock, YES copy
 }
 
-
+/* 判断两个选择器是否相等。
+ */
 BOOL sel_isEqual(SEL lhs, SEL rhs)
 {
     return bool(lhs == rhs);

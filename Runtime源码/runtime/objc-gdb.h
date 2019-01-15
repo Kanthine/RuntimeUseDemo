@@ -46,7 +46,7 @@ __BEGIN_DECLS
 * Class pointer preflighting
 **********************************************************************/
 
-// Return cls if it's a valid class, or crash.
+// 如果cls是一个有效的类，则返回cls，否则崩溃。
 OBJC_EXPORT Class gdb_class_getClass(Class cls)
 #if __OBJC2__
     __OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_3_1);
@@ -54,7 +54,7 @@ OBJC_EXPORT Class gdb_class_getClass(Class cls)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_3_1);
 #endif
 
-// Same as gdb_class_getClass(object_getClass(cls)).
+// 与 gdb_class_getClass(object_getClass(cls)) 相同.
 OBJC_EXPORT Class gdb_object_getClass(id obj)
     __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
 

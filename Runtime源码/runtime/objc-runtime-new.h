@@ -448,8 +448,7 @@ struct locstamped_category_list_t {
 #define RW_HAS_CXX_CTOR       (1<<18)
 // class or superclass has .cxx_destruct implementation
 #define RW_HAS_CXX_DTOR       (1<<17)
-// class or superclass has default alloc/allocWithZone: implementation
-// Note this is is stored in the metaclass.
+// 类或父类实现默认的alloc/allocWithZone:方法；注意这是存储在元类中的。
 #define RW_HAS_DEFAULT_AWZ    (1<<16)
 
 // class is a Swift class
@@ -878,6 +877,8 @@ public:
         bits = (bits & ~FAST_DATA_MASK) | (uintptr_t)newData;
     }
 
+    /* 当前类或者父类含有默认的 retain/release/autorelease/retainCount/_tryRetain/_isDeallocating/retainWeakReference/allowsWeakReference 方法
+     */
     bool hasDefaultRR() {
         return getBit(FAST_HAS_DEFAULT_RR);
     }
@@ -900,6 +901,7 @@ public:
     }
 #else
     bool hasDefaultAWZ() {
+        // 类或父类实现默认的alloc/allocWithZone:方法；注意这是存储在元类中的。
         return data()->flags & RW_HAS_DEFAULT_AWZ;
     }
     void setHasDefaultAWZ() {
@@ -1041,6 +1043,7 @@ struct objc_class : objc_object {
         data()->changeFlags(set, clear);
     }
 
+    //表明该类是否自定义了release和retain方法,在ARC下是不允许使用release和retain的
     bool hasCustomRR() {
         return ! bits.hasDefaultRR();
     }
@@ -1052,6 +1055,7 @@ struct objc_class : objc_object {
     void printCustomRR(bool inherited);
 
     bool hasCustomAWZ() {
+        // 类或父类实现默认的alloc/allocWithZone:方法；注意这是存储在元类中的。
         return ! bits.hasDefaultAWZ();
     }
     void setHasDefaultAWZ() {

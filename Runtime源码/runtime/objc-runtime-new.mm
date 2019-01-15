@@ -168,10 +168,12 @@ disableSharedCacheOptimizations(void)
     fixed_up_protocol = PROTOCOL_FIXED_UP_1 | PROTOCOL_FIXED_UP_2;
 }
 
+// 方法列表 mlist 是否被标记为唯一的和排序的 ？
 bool method_list_t::isFixedUp() const {
     return flags() == fixed_up_method_list;
 }
 
+// 将方法列表 mlist 标记为唯一的和排序的
 void method_list_t::setFixedUp() {
     runtimeLock.assertWriting();
     assert(!isFixedUp());
@@ -206,8 +208,10 @@ method_list_t **method_array_t::endCategoryMethodLists(Class cls)
     return mlistsEnd - 1;
 }
 
-static const char *sel_cname(SEL sel)
-{
+/* 获取指定选择器 sel 的名称
+ * @param sel 指定的选择器
+ */
+static const char *sel_cname(SEL sel){
     return (const char *)(void *)sel;
 }
 
@@ -296,123 +300,97 @@ static class_ro_t *make_ro_writeable(class_rw_t *rw)
     return (class_ro_t *)rw->ro;
 }
 
-
-/***********************************************************************
- * 获取未添加到Class中的category哈希表 NXMapTable
- * 哈希表 NXMapTable 存储着键值对：键为指定的类，值为未添加到指定类中 category 列表
+/* 获取未添加到 Class 中的 category 哈希表
+ * @key 哈希表的键，是指定的 class
+ * @value 键值，是一个结构数组，数组中存储结构 locstamped_category_t
  * Locking: runtimeLock must be held by the caller.
- **********************************************************************/
-static NXMapTable *unattachedCategories(void)
-{
+ */
+static NXMapTable *unattachedCategories(void){
     runtimeLock.assertWriting();
-    
     // 未添加到Class中的category哈希表
     static NXMapTable *category_map = nil;
-    
     if (category_map) return category_map;
-    
-    // fixme initial map size
-    category_map = NXCreateMapTable(NXPtrValueMapPrototype, 16);
-    
+    category_map = NXCreateMapTable(NXPtrValueMapPrototype, 16);// 创建一个哈希表
     return category_map;
 }
 
-
-/***********************************************************************
- * addUnattachedCategoryForClass() 为类添加独立的类别:
- * 该函数会对 Class 和 Category 做一个映射关联
+/* 将指定分类插入到哈希表中：在哈希表中对 Class 和 Category 做一个映射关联
+ * @param cat 指定分类的结构指针；
+ * @param cls 指定的类；
  * Locking: runtimeLock must be held by the caller.
- **********************************************************************/
-static void addUnattachedCategoryForClass(category_t *cat, Class cls,
-                                          header_info *catHeader)
-{
+ */
+static void addUnattachedCategoryForClass(category_t *cat, Class cls,header_info *catHeader){
     runtimeLock.assertWriting();
     
-    // 获取到未添加的Category哈希表
-    // DO NOT use cat->cls! cls may be cat->cls->isa instead
-    NXMapTable *cats = unattachedCategories();
+    NXMapTable *cats = unattachedCategories();// 获取到未添加的Category哈希表
     category_list *list;
     
-    // 获取到buckets中的value，并向value对应的数组中添加category_t
-    list = (category_list *)NXMapGet(cats, cls);
+    list = (category_list *)NXMapGet(cats, cls);// 获取未添加到 Class 中的 category 数组
     if (!list) {
-        list = (category_list *)
-        calloc(sizeof(*list) + sizeof(list->list[0]), 1);
+        //如果数组为 NULL ，为数组分配内存空间
+        list = (category_list *)calloc(sizeof(*list) + sizeof(list->list[0]), 1);
     } else {
-        list = (category_list *)
-        realloc(list, sizeof(*list) + sizeof(list->list[0]) * (list->count + 1));
+        //如果数组有值，分配一个新的 内存空间存储指定的 cat
+        list = (category_list *)realloc(list, sizeof(*list) + sizeof(list->list[0]) * (list->count + 1));
     }
     
-    // 替换之前的list字段
+    // 将指定的 cat 存储在新分配的内存上
     list->list[list->count++] = (locstamped_category_t){cat, catHeader};
+    //插入哈希表
     NXMapInsert(cats, cls, list);
 }
 
 
-/***********************************************************************
- * removeUnattachedCategoryForClass 移除类的未附加分类
+/* 将指定分类从到哈希表中移除：解除 Class 和 Category 之间的映射关系
  * Locking: runtimeLock must be held by the caller.
- **********************************************************************/
-static void removeUnattachedCategoryForClass(category_t *cat, Class cls)
-{
+ */
+static void removeUnattachedCategoryForClass(category_t *cat, Class cls){
     runtimeLock.assertWriting();
     
-    // DO NOT use cat->cls! cls may be cat->cls->isa instead
     NXMapTable *cats = unattachedCategories();//获取未添加到Class中的category哈希表
     category_list *list;
     
-    //根据键 cls 取出哈希表 cats 中对应的值
-    list = (category_list *)NXMapGet(cats, cls);
-    //如果取出的值为 NULL ，则返回
-    if (!list) return;
+    list = (category_list *)NXMapGet(cats, cls);// 获取未添加到 Class 中的 category 数组
+    if (!list) return;//如果取出的值为 NULL ，则返回
     
-    //遍历 category_list：查找指定的 category_t
+    //遍历分类数组，查找指定的分类 category_t
     uint32_t i;
     for (i = 0; i < list->count; i++) {
-        if (list->list[i].cat == cat) {
-            //在 category_list 中找到指定的 category_t：删除该category_t 并 移动条目以保留列表顺序
-            memmove(&list->list[i], &list->list[i+1],
-                    (list->count-i-1) * sizeof(list->list[i]));
-            list->count--;
+        if (list->list[i].cat == cat) {//在分类数组中找到指定的 category_t
+            //删除该category_t 并 移动条目以保留列表顺序
+            memmove(&list->list[i], &list->list[i+1],(list->count-i-1) * sizeof(list->list[i]));
+            list->count--;//重置数组元素数量
             return;
         }
     }
 }
 
 
-/***********************************************************************
- * 获取指定类的未附加类别列表，并将其从哈希表中删除。
+/* 从哈希表中获取指定类的未附加类别列表，并将其从哈希表中移除。
  * @param realizing
  * @note 最后需要释放获取的列表。
  * Locking: runtimeLock must be held by the caller.
- **********************************************************************/
-static category_list *
-unattachedCategoriesForClass(Class cls, bool realizing)
-{
+ */
+static category_list *unattachedCategoriesForClass(Class cls, bool realizing){
     runtimeLock.assertWriting();
-    //unattachedCategories() 函数获取未添加到 Class 中的 category 哈希表
+    //unattachedCategories() 函数获取未添加到 Class 中的 category 数组
+    //NXMapRemove() 函数移除哈希表中的键值对，并返回与键关联的值
     return (category_list *)NXMapRemove(unattachedCategories(), cls);
 }
 
 
-/***********************************************************************
- * removeAllUnattachedCategoriesForClass
- * Deletes all unattached categories (loaded or not) for a class.
+/* 从哈希表中获取指定类的未附加分类列表，并将其从哈希表中移除；然后释放掉获取的分类数组；
  * Locking: runtimeLock must be held by the caller.
- **********************************************************************/
-static void removeAllUnattachedCategoriesForClass(Class cls)
-{
+ */
+static void removeAllUnattachedCategoriesForClass(Class cls){
     runtimeLock.assertWriting();
-    
     void *list = NXMapRemove(unattachedCategories(), cls);
     if (list) free(list);
 }
 
 
-/***********************************************************************
- * 获取 NSObject 类
- * Locking: none
- **********************************************************************/
+/* 获取 NSObject 类
+ */
 static Class classNSObject(void){
     extern objc_class OBJC_CLASS_$_NSObject;
     return (Class)&OBJC_CLASS_$_NSObject;
@@ -489,73 +467,68 @@ static bool isBundleClass(Class cls){
     return cls->data()->ro->flags & RO_FROM_BUNDLE;
 }
 
-
+/* 该函数执行的重要功能：
+ * 1、关联方法名称与选择器；
+ * 2、为方法 method_t 的结构成员 name 赋值；
+ * 3、如果 sort 需要排序，将列表中的方法按选择器地址排序
+ * 4、标记该方法列表是 唯一的和有序的；
+ * @param sort 是否按选择器地址排序
+ */
 static void fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort){
     runtimeLock.assertWriting();
     assert(!mlist->isFixedUp());
-    
-    // fixme lock less in attachMethodLists ?
     sel_lock();
-    
-    // 方法列表中的唯一选择器。
+    //遍历方法列表：根据方法名称创建选择器并将选择器存储在哈希表中
     for (auto& meth : *mlist) {
-        const char *name = sel_cname(meth.name);
-        
+        const char *name = sel_cname(meth.name);//获取指定选择器 sel 的名称
+        //将方法名与选择器关联在哈希表 namedSelectors 中
         SEL sel = sel_registerNameNoLock(name, bundleCopy);
-        meth.name = sel;
+        meth.name = sel;//方法的选择器赋值
         
-        if (ignoreSelector(sel)) {
-            meth.imp = (IMP)&_objc_ignored_method;
+        if (ignoreSelector(sel)) {//是否是被忽略的方法
+            meth.imp = (IMP)&_objc_ignored_method;//重置方法的实现
         }
     }
-    
     sel_unlock();
-    
-    // Sort by selector address.
-    if (sort) {
+    if (sort) {//按选择器地址排序
         method_t::SortBySELAddress sorter;
         std::stable_sort(mlist->begin(), mlist->end(), sorter);
     }
-    
-    // Mark method list as uniqued and sorted
+    // 将方法列表 mlist 标记为唯一的和排序的
     mlist->setFixedUp();
 }
 
 /* 准备 mlists 中的方法
- *
+ * @param cls 指定的类
+ * @param addedLists 二维数组
+ * @param addedCount 二维数组的最外层数组元素数量
+ * @param baseMethods 是否是基础方法
+ * @param methodsFromBundle 是否来自 bundle
  */
 static void prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
-                   bool baseMethods, bool methodsFromBundle)
-{
+                   bool baseMethods, bool methodsFromBundle){
     runtimeLock.assertWriting();
-    
     if (addedCount == 0) return;
     
-    // Don't scan redundantly
-    bool scanForCustomRR = !UseGC && !cls->hasCustomRR();
-    bool scanForCustomAWZ = !UseGC && !cls->hasCustomAWZ();
-    
-    // There exist RR/AWZ special cases for some class's base methods.
-    // But this code should never need to scan base methods for RR/AWZ:
-    // default RR/AWZ cannot be set before setInitialized().
-    // Therefore we need not handle any special cases here.
+    bool scanForCustomRR = !UseGC && !cls->hasCustomRR();//类实现release和retain方法
+    bool scanForCustomAWZ = !UseGC && !cls->hasCustomAWZ();//类或父类实现默认的alloc/allocWithZone:方法
+    // 对于某些类的基方法，存在RR/AWZ特殊情况。
+    // 但该函数不应该需要扫描RR/AWZ的基本方法: 在 setInitialized() 之前无法设置默认 RR/AWZ。因此，我们不需要在这里处理任何特殊情况。
     if (baseMethods) {
         assert(!scanForCustomRR  &&  !scanForCustomAWZ);
     }
     
-    // Add method lists to array.
-    // Reallocate un-fixed method lists.
-    // The new methods are PREPENDED to the method list array.
-    
+    // 遍历二维数组addedLists，向数组中添加方法列表：新方法放在方法列表数组的前面。
     for (int i = 0; i < addedCount; i++) {
-        method_list_t *mlist = addedLists[i];
-        assert(mlist);
+        method_list_t *mlist = addedLists[i];//二维数组指定索引处的方法列表
+        assert(mlist);//断言方法列表不为空
         
-        // Fixup selectors if necessary
-        if (!mlist->isFixedUp()) {
-            fixupMethodList(mlist, methodsFromBundle, true/*sort*/);
+        if (!mlist->isFixedUp()) {//该方法列表是否被标记
+            //关联方法名称与选择器
+            fixupMethodList(mlist, methodsFromBundle, true);
         }
         
+        //扫描类标记跟踪的方法实现
         // Scan for method implementations tracked by the class's flags
         if (scanForCustomRR  &&  methodListImplementsRR(mlist)) {
             cls->setHasCustomRR();
@@ -570,10 +543,10 @@ static void prepareMethodLists(Class cls, method_list_t **addedLists, int addedC
 
 
 /* 将分类中的方法列表、属性列表和协议列表添加到类:
+ * @param cls 指定的类
+ * @param cats 分类列表
  * @param flush_caches 是否清空缓存：YES则清空方法缓存
  * @note 假设分类列表中的分类都是按加载顺序加载和排序的，该函数倒序遍历分类列表（最老的类别优先）
- *
- *
  */
 static void attachCategories(Class cls, category_list *cats, bool flush_caches){
     if (!cats) return;//分类列表为空，则直接返回；
@@ -581,36 +554,39 @@ static void attachCategories(Class cls, category_list *cats, bool flush_caches){
     
     bool isMeta = cls->isMetaClass();//判断是否是元类
     
-    // fixme rearrange to remove these intermediate allocations
-    method_list_t **mlists = (method_list_t **)malloc(cats->count * sizeof(*mlists));//方法列表
-    property_list_t **proplists = (property_list_t **)malloc(cats->count * sizeof(*proplists));//属性列表
-    protocol_list_t **protolists = (protocol_list_t **)malloc(cats->count * sizeof(*protolists));//协议列表
+    /* 为列表分配内存
+     * 列表为二维数组：第一维数组的元素是一个指向列表的指针；如 mlists 的第一维数组的元素是一个指向方法列表的数组
+     * 第二维数组的元素是一个个方法、属性、协议
+     */
+    method_list_t **mlists = (method_list_t **)malloc(cats->count * sizeof(*mlists));//为方法列表分配内存
+    property_list_t **proplists = (property_list_t **)malloc(cats->count * sizeof(*proplists));//为属性列表分配内存
+    protocol_list_t **protolists = (protocol_list_t **)malloc(cats->count * sizeof(*protolists));//为协议列表分配内存
     
     // 倒序遍历分类列表，最先得到最新的分类
     int mcount = 0;//方法数量
     int propcount = 0;//属性数量
     int protocount = 0;//协议数量
     int i = cats->count;//从分类的最后一个元素开始遍历
-    bool fromBundle = NO;
+    bool fromBundle = NO;//是否来自 Bundle 中的类
     while (i--) {
-        auto& entry = cats->list[i];
+        auto& entry = cats->list[i];//entry 是个结构 locstamped_category_t
         
         //获取方法列表：如果是元类，获取类方法列表；否则获取实例方法列表
         method_list_t *mlist = entry.cat->methodsForMeta(isMeta);
         if (mlist) {
-            mlists[mcount++] = mlist;// 将方法列表放入 mlists 方法列表数组中
+            mlists[mcount++] = mlist;// 将方法列表存入二维数组 mlists 中
             fromBundle |= entry.hi->isBundle();// 分类的头部信息中存储了是否是 bundle，将其记住
         }
         
         //获取属性列表：如果是元类返回 nil ；否则返回实例属性列表
         property_list_t *proplist = entry.cat->propertiesForMeta(isMeta);
         if (proplist) {
-            proplists[propcount++] = proplist;// 将属性列表放入属性列表数组proplists中
+            proplists[propcount++] = proplist;//将属性列表存入二维数组 proplists中
         }
         
         protocol_list_t *protolist = entry.cat->protocols;//分类实现的协议列表
         if (protolist) {
-            protolists[protocount++] = protolist;// 将协议列表放入协议列表数组 protolists 中
+            protolists[protocount++] = protolist;// 将协议列表存入二维数组 protolists 中
         }
     }
     
@@ -1845,12 +1821,11 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
 }
 
 
-/***********************************************************************
- * 实现一个类：对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
+/* 实现一个类：对类 cls 执行首次初始化，分配可读写数据空间；返回真正的类结构
+ *
  * Locking: runtimeLock must be write-locked by the caller
- **********************************************************************/
-static Class realizeClass(Class cls)
-{
+ */
+static Class realizeClass(Class cls){
     runtimeLock.assertWriting();
     
     const class_ro_t *ro;
@@ -1859,7 +1834,7 @@ static Class realizeClass(Class cls)
     Class metacls;
     bool isMeta;
     
-    if (!cls) return nil;//如果传入的类为 nil ，则直接返回 nil
+    if (!cls) return nil;
     if (cls->isRealized()) return cls;//如果传入的类已实现，则返回该类
     assert(cls == remapClass(cls));//如果重新映射后不相等，抛出异常
     
@@ -1885,8 +1860,7 @@ static Class realizeClass(Class cls)
     
     if (PrintConnecting) {
         _objc_inform("CLASS: realizing class '%s' %s %p %p",
-                     cls->nameForLogging(), isMeta ? "(meta)" : "",
-                     (void*)cls, ro);
+                     cls->nameForLogging(), isMeta ? "(meta)" : "",(void*)cls, ro);
     }
     
     // 如果父类和元类还没有实现，则实现它们。

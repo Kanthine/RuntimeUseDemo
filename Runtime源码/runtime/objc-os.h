@@ -1029,16 +1029,17 @@ static inline void qosEndOverride() { }
 
 template <bool Debug>
 class rwlock_tt : nocopy_t {
-    pthread_rwlock_t mLock;
+    pthread_rwlock_t mLock;//读写锁
 
   public:
+    //用宏 PTHREAD_RWLOCK_INITIALIZER 初始化静态的读写锁变量
     rwlock_tt() : mLock(PTHREAD_RWLOCK_INITIALIZER) { }
     
-    void read() 
-    {
+    void read() {
         lockdebug_rwlock_read(this);
-
         qosStartOverride();
+        
+        //读锁定读写锁:成功返回0；任何其他返回值都表示错误
         int err = pthread_rwlock_rdlock(&mLock);
         if (err) _objc_fatal("pthread_rwlock_rdlock failed (%d)", err);
     }

@@ -347,8 +347,7 @@ static void _finishInitializingAfter(Class cls, Class supercls)
 
 
 /***********************************************************************
-* class_initialize.  Send the '+initialize' message on demand to any
-* uninitialized class. Force initialization of superclasses first.
+* class_initialize.  Send the '+initialize' message on demand to any uninitialized class. Force initialization of superclasses first.
 **********************************************************************/
 void _class_initialize(Class cls)
 {

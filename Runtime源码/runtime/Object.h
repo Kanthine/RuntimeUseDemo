@@ -41,15 +41,15 @@ __OSX_AVAILABLE_STARTING(__MAC_10_0, __IPHONE_NA)
 OBJC_ROOT_CLASS
 @interface Object
 {
-	Class isa;	/* A pointer to the instance's class structure */
+	Class isa;	//指向实例所属类的结构指针
 }
 
-/* Initializing classes and instances */
+/* 初始化类和实例 */
 
 + (id)initialize;
 - (id)init;
 
-/* Creating, copying, and freeing instances */
+/* 创建、复制和释放实例 */
 
 + (id)new;
 + (id)free;
@@ -60,7 +60,7 @@ OBJC_ROOT_CLASS
 - (id)copyFromZone:(void *)zone;
 - (void *)zone;
 
-/* Identifying classes */
+/* 识别类 */
 
 + (id)class;
 + (id)superclass;
@@ -69,20 +69,20 @@ OBJC_ROOT_CLASS
 - (id)superclass;
 - (const char *) name;
 
-/* Identifying and comparing instances */
+/* 标识和比较实例 */
 
 - (id)self;
 - (unsigned int) hash;
 - (BOOL) isEqual:anObject;
 
-/* Testing inheritance relationships */
+/* 测试继承关系 */
 
 - (BOOL) isKindOf: aClassObject;
 - (BOOL) isMemberOf: aClassObject;
 - (BOOL) isKindOfClassNamed: (const char *)aClassName;
 - (BOOL) isMemberOfClassNamed: (const char *)aClassName;
 
-/* Testing class functionality */
+/* 测试类的功能 */
 
 + (BOOL) instancesRespondTo:(SEL)aSelector;
 - (BOOL) respondsTo:(SEL)aSelector;

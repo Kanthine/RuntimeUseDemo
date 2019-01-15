@@ -1,5 +1,4 @@
-/*
- * objc-loadmethod.m
+/* objc-loadmethod.m
  *
  * 全局变量：
  * 结构数组 loadable_classes 中的每个元素都存储了类以及它的 +load 方法的 IMP；
@@ -49,7 +48,7 @@ static int loadable_categories_used = 0;
 static int loadable_categories_allocated = 0;
 
 
-/* 将类添加到可加载列表中
+/* 将类添加到数组 loadable_classes 中
  * @param cls 要添加的类
  * @note 该函数每执行一次，loadable_classes_used 都会加 1 ；
  * @note loadable_classes_used 用于记录这个方法的调用次数，相当于数组 loadable_classes 的元素个数
@@ -81,7 +80,7 @@ void add_class_to_loadable_list(Class cls){
 }
 
 
-/* 将分类添加到可加载列表
+/* 将分类添加到数组 loadable_categories 中
  * @param cat 要添加的分类
  * @note 该函数每执行一次，loadable_categories_used 都会加 1 ；
  * @note loadable_categories_used 用于记录这个方法的调用次数，相当于数组 loadable_categories 的元素个数
@@ -115,7 +114,7 @@ void add_category_to_loadable_list(Category cat){
     loadable_categories_used++;//加 1，用于记录该函数的调用次数；相当于数组 loadable_categories 的元素个数
 }
 
-/* 从可加载列表中移除类
+/* 从数组 loadable_classes 中移除指定类
  * @param cls 要移除的类
  * @note 类 cls 以前可能是可加载的，但现在它不再可加载(因为它的镜像是未映射的)。
  */
@@ -137,7 +136,7 @@ void remove_class_from_loadable_list(Class cls){
     }
 }
 
-/* 从可加载列表中移除分类
+/* 从数组 loadable_categories 中移除指定分类
  * @param cls 要移除的分类
  * @note 分类 cat 以前可能是可加载的，但现在它不再可加载(因为它的镜像是未映射的)。
  */

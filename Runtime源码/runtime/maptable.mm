@@ -160,6 +160,11 @@ void *NXMapMember(NXMapTable *table, const void *key, void **value) {
     return _NXMapMember(table, key, value);
 }
 
+/* 获取指定哈希表中的指定键所关联的值
+ * @param table 指定的哈希表
+ * @param key 指定的键
+ * @return 返回键所对应的值；可能为 NULL
+ */
 void *NXMapGet(NXMapTable *table, const void *key) {
     void    *value;
     return (_NXMapMember(table, key, &value) != NX_MAPNOTAKEY) ? value : NULL;
@@ -236,8 +241,10 @@ void *NXMapInsert(NXMapTable *table, const void *key, const void *value) {
 
 static int mapRemove = 0;
 
-/* @param NXMapTable 关系映射表
- * @key 哈希表中存储的键
+/* 移除哈希表中的键值对
+ * @param table 关系映射表
+ * @param key 哈希表中存储的键
+ * @return 返回 key 对应的键值
  */
 void *NXMapRemove(NXMapTable *table, const void *key) {
     MapPair    *pairs = (MapPair *)table->buckets;//哈希表中存储的数据
