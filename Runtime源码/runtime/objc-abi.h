@@ -50,7 +50,7 @@ OBJC_EXPORT void _objcInit(void)
 
 /* Images */
 
-// Description of an Objective-C image.
+// Objective-C 镜像的描述。
 // __DATA,__objc_imageinfo stores one of these.
 typedef struct objc_image_info {
     uint32_t version; // currently 0

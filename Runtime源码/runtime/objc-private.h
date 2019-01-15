@@ -348,27 +348,35 @@ __BEGIN_DECLS
 #define _objcHeaderOptimizedByDyld(h)  ((h)->info  &&  ((h)->info->flags & OBJC_IMAGE_OPTIMIZED_BY_DYLD))
 
 /* OBJC_IMAGE_OPTIMIZED_BY_DYLD:
- 在dyld共享缓存中预先处理的各种元数据。
- 永远不要为共享缓存文件本身之外的images设置。
-*/
-   
-
+ * 在dyld共享缓存中预先处理的各种元数据。
+ * 永远不要为共享缓存文件本身之外的images设置。
+ */
 typedef struct header_info {
-    struct header_info *next;
-    const headerType *mhdr;
-    const objc_image_info *info;
+    struct header_info *next;//指向下一个节点
+    const headerType *mhdr;//32位或者64位架构的头文件
+    const objc_image_info *info;//Objective-C 镜像的描述：版本号、flag 值
     const char *fname;  // same as Dl_info.dli_fname
-    bool loaded;
+    bool loaded;//是否已加载
     bool inSharedCache;
     bool allClassesRealized;
 
     // Do not add fields without editing ObjCModernAbstraction.hpp
 
+    //判断是否已加载
     bool isLoaded() {
         return loaded;
     }
 
     bool isBundle() {
+        /* 文件类型，比如可执行文件、库文件、Dsym文件;
+         * MH_OBJECT  目标文件：.o文件 ；.a/.framework静态库
+         * MH_EXECUTE 可执行文件： app/MyApp ；.out
+         * MH_CORE    核心文件
+         * MH_DYLIB    动态库 .framework/xxx ； /dylib
+         * MH_DYLINKER 动态链接器 usr/lib/dyld
+         * MH_BUNDLE    动态绑定 Bundle 文件
+         * MH_DSYM   存储二进制文件符号信息的文件：.dYSM/Contents/Resources/DWARF/MyApp
+         */
         return mhdr->filetype == MH_BUNDLE;
     }
 
