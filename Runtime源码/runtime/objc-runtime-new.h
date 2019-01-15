@@ -1153,6 +1153,7 @@ struct objc_class : objc_object {
 
     bool isLoadable() {
         assert(isRealized());
+        //任何为+load注册的类都是可加载的
         return true;  // any class registered for +load is definitely loadable
     }
 
