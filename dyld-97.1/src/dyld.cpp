@@ -2610,6 +2610,7 @@ static const char* basename(const char* path)
     return last;
 }
 
+#pragma mark - 1、设置上下文信息
 static void setContext(const struct mach_header* mainExecutableMH, int argc, const char* argv[], const char* envp[], const char* apple[])
 {
 	gLinkContext.loadLibrary			= &libraryLocator;
@@ -2799,7 +2800,8 @@ static void loadInsertedDylib(const char* path)
 	}
 }
 
-//
+// 从 dyldStartup.s 文件开始执行，其中用汇编实现的 __dyld_start 方法里面调用了 dyldbootstrap::start() 方法
+// 然后调用了 dyld 的 main 函数
 // Entry point for dyld.  The kernel loads dyld and jumps to __dyld_start which
 // sets up some registers and call this function.
 //
@@ -2807,10 +2809,12 @@ static void loadInsertedDylib(const char* path)
 //
 uintptr_t
 _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide, int argc, const char* argv[], const char* envp[], const char* apple[])
-{	
+{
+    //设置上下文信息
 	setContext(mainExecutableMH, argc, argv, envp, apple);
 	
 	// Pickup the pointer to the exec path.
+    //获取可执行文件的路径
 	sExecPath = apple[0];
 	bool ignoreEnvironmentVariables = false;
 #if __i386__
@@ -2823,6 +2827,7 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 		ignoreEnvironmentVariables = true;
 	}
 #endif
+    //将相对路径换成绝对路径
 	if ( sExecPath[0] != '/' ) {
 		// have relative path, use cwd to make absolute
 		char cwdbuff[MAXPATHLEN];
@@ -2836,17 +2841,18 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 		}
 	}
 	uintptr_t result = 0;
+    //保存执行文件头部，后续可以根据头部访问其它信息
 	sMainExecutableMachHeader = mainExecutableMH;
 	sMainExecutableIsSetuid = issetugid();
 	if ( sMainExecutableIsSetuid )
 		pruneEnvironmentVariables(envp, &apple);
 	else
-		checkEnvironmentVariables(envp, ignoreEnvironmentVariables);
-	if ( sEnv.DYLD_PRINT_OPTS ) 
+		checkEnvironmentVariables(envp, ignoreEnvironmentVariables);//检查设置环境变量
+	if ( sEnv.DYLD_PRINT_OPTS ) //如果设置了 DYLD_PRINT_OPTS 环境变量，则打印参数
 		printOptions(argv);
-	if ( sEnv.DYLD_PRINT_ENV ) 
+	if ( sEnv.DYLD_PRINT_ENV ) //如果设置了 DYLD_PRINT_ENV 环境变量，则打印环境变量
 		printEnvironmentVariables(envp);
-	getHostInfo();
+	getHostInfo();//获取当前运行架构的信息
 	// install gdb notifier
 	stateToHandlers(dyld_image_state_dependents_mapped, sBatchHandlers)->push_back(notifyGDB);
 	// make initial allocations large enough that it is unlikely to need to be re-alloced
@@ -2859,16 +2865,18 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 	
 	try {
 		// instantiate ImageLoader for main executable
+        //加载可执行文件并生成一个 ImageLoader 实例对象
 		sMainExecutable = instantiateFromLoadedImage(mainExecutableMH, mainExecutableSlide, sExecPath);
 		sMainExecutable->setNeverUnload();
 		gLinkContext.mainExecutable = sMainExecutable;
 		// load shared cache
-		checkSharedRegionDisable();
+		checkSharedRegionDisable();//检查共享缓存是否开启：在 iOS 中必须开启
 	#if DYLD_SHARED_CACHE_SUPPORT
 		if ( gLinkContext.sharedRegionMode != ImageLoader::kDontUseSharedRegion )
-			mapSharedCache();
+			mapSharedCache();//检查共享缓存是否映射到了共享区域
 	#endif
 		// load any inserted libraries
+        //加载所有 DYLD_INSERT_LIBRARIES 指定的库
 		if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
 			for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
 				loadInsertedDylib(*lib);
@@ -2879,7 +2887,7 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 
 		// link main executable
 		gLinkContext.linkingMainExecutable = true;
-		link(sMainExecutable, sEnv.DYLD_BIND_AT_LAUNCH, ImageLoader::RPathChain(NULL, NULL));
+		link(sMainExecutable, sEnv.DYLD_BIND_AT_LAUNCH, ImageLoader::RPathChain(NULL, NULL));//链接主程序
 		gLinkContext.linkingMainExecutable = false;
 		if ( sMainExecutable->forceFlat() ) {
 			gLinkContext.bindFlat = true;
@@ -2890,6 +2898,7 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 		// link any inserted libraries
 		// do this after linking main executable so that any dylibs pulled in by inserted 
 		// dylibs (e.g. libSystem) will not be in front of dylibs the program uses
+        //链接插入的动态库
 		if ( sInsertedDylibCount > 0 ) {
 			for(unsigned int i=0; i < sInsertedDylibCount; ++i) {
 				ImageLoader* image = sAllImages[i+1];
