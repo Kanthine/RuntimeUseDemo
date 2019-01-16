@@ -94,8 +94,8 @@ _objcInit(void)
 // Objective-C 镜像的描述。
 // __DATA,__objc_imageinfo stores one of these.
 typedef struct objc_image_info {
-    uint32_t version; // currently 0
-    uint32_t flags;
+    uint32_t version; // 目前永远为 0
+    uint32_t flags;//用于做表示需要支持的特性的,比如是否需要/支持 Garbage Collection 。
 
 #if __cplusplus >= 201103L
   private:

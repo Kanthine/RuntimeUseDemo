@@ -391,7 +391,7 @@ private:
     // Images in the shared cache will have an empty array here while those
     // allocated at run time will allocate a single entry.
     header_info_rw rw_data[];
-} header_info;
+} header_info;//文件类型, 目标架构
 
 extern header_info *FirstHeader;
 extern header_info *LastHeader;

@@ -2128,12 +2128,9 @@ void _objc_flush_caches(Class cls)
 }
 
 
-/* 处理由dyld映射指定的镜像；在获取ABI特定的锁之后调用ABI不可知的代码。
- * Locking: write-locks runtimeLock
+/* 处理被映射到 dyld 的指定镜像；在获取ABI特定的锁之后调用ABI不可知的代码。
  */
-void map_images(unsigned count, const char * const paths[],
-           const struct mach_header * const mhdrs[])
-{
+void map_images(unsigned count, const char * const paths[],const struct mach_header * const mhdrs[]){
     mutex_locker_t lock(runtimeLock);
     //内部做了一个调用中转: 调用到 map_images_nolock() 函数
     return map_images_nolock(count, paths, mhdrs);

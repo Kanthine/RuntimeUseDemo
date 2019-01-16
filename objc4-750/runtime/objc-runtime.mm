@@ -41,7 +41,7 @@
 * Exports.
 **********************************************************************/
 
-/* Linker metadata symbols */
+/* 链接器元数据符号 */
 
 // NSObject was in Foundation/CF on macOS < 10.8.
 #if TARGET_OS_OSX
@@ -163,11 +163,9 @@ Class objc_getRequiredClass(const char *aClassName){
  */
 Class objc_lookUpClass(const char *aClassName){
     if (!aClassName) return Nil;
-    
     // NO unconnected, NO class handler
     return look_up_class(aClassName, NO, NO);
 }
-
 
 /* 根据指定名称返回一个类的元类。
  * 如果指定名称的类不存在，则返回 nil 并且打印日志 objc[3966]: class `aClassName' not linked into application

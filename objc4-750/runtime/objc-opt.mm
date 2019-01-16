@@ -21,89 +21,72 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
-/*
-  objc-opt.mm
-  Management of optimizations in the dyld shared cache 
+/* objc-opt.mm   对 dyld 共享缓存中的优化进行管理
 */
 
 #include "objc-private.h"
 
 
 #if !SUPPORT_PREOPT
-// Preoptimization not supported on this platform.
+// 当前系统不支持 dyld 共享缓存优化
 
 struct objc_selopt_t;
 
-bool isPreoptimized(void) 
-{
+bool isPreoptimized(void) {
     return false;
 }
 
-bool noMissingWeakSuperclasses(void) 
-{
+bool noMissingWeakSuperclasses(void) {
     return false;
 }
 
-bool header_info::isPreoptimized() const
-{
+bool header_info::isPreoptimized() const{
     return false;
 }
 
-objc_selopt_t *preoptimizedSelectors(void) 
-{
+objc_selopt_t *preoptimizedSelectors(void) {
     return nil;
 }
 
-Protocol *getPreoptimizedProtocol(const char *name)
-{
+Protocol *getPreoptimizedProtocol(const char *name){
     return nil;
 }
 
-unsigned int getPreoptimizedClassUnreasonableCount()
-{
+unsigned int getPreoptimizedClassUnreasonableCount(){
     return 0;
 }
 
-Class getPreoptimizedClass(const char *name)
-{
+Class getPreoptimizedClass(const char *name){
     return nil;
 }
 
-Class* copyPreoptimizedClasses(const char *name, int *outCount)
-{
+Class* copyPreoptimizedClasses(const char *name, int *outCount){
     *outCount = 0;
     return nil;
 }
 
-bool sharedRegionContains(const void *ptr)
-{
+bool sharedRegionContains(const void *ptr){
     return false;
 }
 
-header_info *preoptimizedHinfoForHeader(const headerType *mhdr)
-{
+header_info *preoptimizedHinfoForHeader(const headerType *mhdr){
     return nil;
 }
 
-header_info_rw *getPreoptimizedHeaderRW(const struct header_info *const hdr)
-{
+header_info_rw *getPreoptimizedHeaderRW(const struct header_info *const hdr){
     return nil;
 }
 
-void preopt_init(void)
-{
+void preopt_init(void){
     disableSharedCacheOptimizations();
     
     if (PrintPreopt) {
-        _objc_inform("PREOPTIMIZATION: is DISABLED "
-                     "(not supported on ths platform)");
+        _objc_inform("PREOPTIMIZATION: is DISABLED (not supported on ths platform)");
     }
 }
 
-
-// !SUPPORT_PREOPT
 #else
-// SUPPORT_PREOPT
+// 在 iOS 系统上必须支持 dyld 共享缓存优化
 
 #include <objc-shared-cache.h>
 
@@ -116,69 +99,55 @@ using objc_opt::objc_opt_t;
 
 __BEGIN_DECLS
 
-// preopt: the actual opt used at runtime (nil or &_objc_opt_data)
-// _objc_opt_data: opt data possibly written by dyld
-// opt is initialized to ~0 to detect incorrect use before preopt_init()
-
+/* preopt: runtime 使用的实际 opt ( nil 或 &_objc_opt_data )
+ * _objc_opt_data: opt数据可能是由 dyld 写入
+ * opt被初始化为 ~0，以便在 preopt_init() 之前检测错误的使用
+ */
 static const objc_opt_t *opt = (objc_opt_t *)~0;
 static uintptr_t shared_cache_start;
 static uintptr_t shared_cache_end;
-static bool preoptimized;
+static bool preoptimized;//是否预优化
 
 extern const objc_opt_t _objc_opt_data;  // in __TEXT, __objc_opt_ro
 
-/***********************************************************************
-* Return YES if we have a valid optimized shared cache.
-**********************************************************************/
-bool isPreoptimized(void) 
-{
+/* 判断是否是预优化
+ * @return 如果我们有一个有效的优化共享缓存，返回YES。
+ */
+bool isPreoptimized(void) {
     return preoptimized;
 }
 
-
-/***********************************************************************
-* Return YES if the shared cache does not have any classes with 
-* missing weak superclasses.
-**********************************************************************/
-bool noMissingWeakSuperclasses(void) 
-{
-    if (!preoptimized) return NO;  // might have missing weak superclasses
+/* 如果共享缓存没有任何缺少weak父类的类，则返回YES。
+ */
+bool noMissingWeakSuperclasses(void) {
+    if (!preoptimized) return NO;  // 可能丢失了weak父类
     return opt->flags & objc_opt::NoMissingWeakSuperclasses;
 }
 
 
-/***********************************************************************
-* Return YES if this image's dyld shared cache optimizations are valid.
-**********************************************************************/
-bool header_info::isPreoptimized() const
-{
-    // preoptimization disabled for some reason
-    if (!preoptimized) return NO;
-
-    // image not from shared cache, or not fixed inside shared cache
-    if (!info()->optimizedByDyld()) return NO;
-
+/* 如果该镜像的 dyld 共享缓存优化有效，则返回YES。
+ */
+bool header_info::isPreoptimized() const{
+    if (!preoptimized) return NO;// 由于某些原因禁用了预优化
+    if (!info()->optimizedByDyld()) return NO;// 镜像不是来自共享缓存，或不在共享缓存内
     return YES;
 }
 
-
-objc_selopt_t *preoptimizedSelectors(void) 
-{
+//获取预优化的选择器
+objc_selopt_t *preoptimizedSelectors(void) {
     return opt ? opt->selopt() : nil;
 }
 
-
-Protocol *getPreoptimizedProtocol(const char *name)
-{
+/* 根据指定名称，获取预优化的协议
+ */
+Protocol *getPreoptimizedProtocol(const char *name){
     objc_protocolopt_t *protocols = opt ? opt->protocolopt() : nil;
     if (!protocols) return nil;
-
     return (Protocol *)protocols->getProtocol(name);
 }
 
 
-unsigned int getPreoptimizedClassUnreasonableCount()
-{
+unsigned int getPreoptimizedClassUnreasonableCount(){
     objc_clsopt_t *classes = opt ? opt->clsopt() : nil;
     if (!classes) return 0;
     
@@ -187,7 +156,8 @@ unsigned int getPreoptimizedClassUnreasonableCount()
     return classes->capacity + classes->duplicateCount();
 }
 
-
+/* 根据指定名称，获取预优化的类
+ */
 Class getPreoptimizedClass(const char *name)
 {
     objc_clsopt_t *classes = opt ? opt->clsopt() : nil;
@@ -217,8 +187,7 @@ Class getPreoptimizedClass(const char *name)
 }
 
 
-Class* copyPreoptimizedClasses(const char *name, int *outCount)
-{
+Class* copyPreoptimizedClasses(const char *name, int *outCount){
     *outCount = 0;
 
     objc_clsopt_t *classes = opt ? opt->clsopt() : nil;
@@ -342,9 +311,10 @@ header_info_rw *getPreoptimizedHeaderRW(const struct header_info *const hdr)
 }
 
 
-void preopt_init(void)
-{
-    // Get the memory region occupied by the shared cache.
+/* 共享内存优化
+ */
+void preopt_init(void){
+    // 获取共享缓存占用的内存区域。
     size_t length;
     const void *start = _dyld_get_shared_cache_range(&length);
     if (start) {
@@ -359,16 +329,14 @@ void preopt_init(void)
     opt = &_objc_opt_data;
 
     if (DisablePreopt) {
-        // OBJC_DISABLE_PREOPTIMIZATION is set
-        // If opt->version != VERSION then you continue at your own risk.
+        // OBJC_DISABLE_PREOPTIMIZATION 设置
+        // 如果 opt->version != VERSION 那么将承担风险。
         failure = "(by OBJC_DISABLE_PREOPTIMIZATION)";
     } 
     else if (opt->version != objc_opt::VERSION) {
-        // This shouldn't happen. You probably forgot to edit objc-sel-table.s.
-        // If dyld really did write the wrong optimization version, 
-        // then we must halt because we don't know what bits dyld twiddled.
-        _objc_fatal("bad objc preopt version (want %d, got %d)", 
-                    objc_opt::VERSION, opt->version);
+        // 这不该发生。可能忘记编辑 objc-sel-table.s.
+        // 如果 dyld 确实编写了错误的优化版本，必须停下来，因为我们二进制 dyld 有何改动。
+        _objc_fatal("bad objc preopt version (want %d, got %d)",objc_opt::VERSION, opt->version);
     }
     else if (!opt->selopt()  ||  !opt->headeropt_ro()) {
         // One of the tables is missing. 
@@ -376,7 +344,7 @@ void preopt_init(void)
     }
     
     if (failure) {
-        // All preoptimized selector references are invalid.
+        // 所有预先优化的选择器引用无效。
         preoptimized = NO;
         opt = nil;
         disableSharedCacheOptimizations();
@@ -386,12 +354,11 @@ void preopt_init(void)
         }
     }
     else {
-        // Valid optimization data written by dyld shared cache
+        // 由 dyld 共享缓存写入的有效优化数据
         preoptimized = YES;
 
         if (PrintPreopt) {
-            _objc_inform("PREOPTIMIZATION: is ENABLED "
-                         "(version %d)", opt->version);
+            _objc_inform("PREOPTIMIZATION: is ENABLED (version %d)", opt->version);
         }
     }
 }

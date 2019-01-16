@@ -42,12 +42,10 @@
 #   define DEBUG 0
 #endif
 
-// Define SUPPORT_GC_COMPAT=1 to enable compatibility where GC once was.
-// OBJC_NO_GC and OBJC_NO_GC_API in objc-api.h mean something else.
 #if !TARGET_OS_OSX
-#   define SUPPORT_GC_COMPAT 0
+#   define SUPPORT_GC_COMPAT 0//iOS 不兼容 Garbage Collection
 #else
-#   define SUPPORT_GC_COMPAT 1
+#   define SUPPORT_GC_COMPAT 1//兼容 Garbage Collection
 #endif
 
 // Define SUPPORT_ZONES=1 to enable malloc zone support in NXHashTable.
@@ -64,11 +62,11 @@
 #   define SUPPORT_MOD 1
 #endif
 
-// Define SUPPORT_PREOPT=1 to enable dyld shared cache optimizations
+// 定义 SUPPORT_PREOPT=1 以启用 dyld 共享缓存优化
 #if TARGET_OS_WIN32  ||  TARGET_OS_SIMULATOR
 #   define SUPPORT_PREOPT 0
 #else
-#   define SUPPORT_PREOPT 1
+#   define SUPPORT_PREOPT 1 // 在 iOS 系统上必须支持 dyld 共享缓存优化
 #endif
 
 // Define SUPPORT_TAGGED_POINTERS=1 to enable tagged pointer objects

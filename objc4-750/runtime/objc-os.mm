@@ -199,7 +199,7 @@ OBJC_EXPORT void _objc_unload_image(HMODULE image, header_info *hinfo)
 
 
 /***********************************************************************
-* libobjc must never run static destructors. 
+* libobjc 绝对不能运行静态析构函数。
 * Cover libc's __cxa_atexit with our own definition that runs nothing.
 * rdar://21734598  ER: Compiler option to suppress C++ static destructors
 **********************************************************************/
@@ -207,41 +207,38 @@ extern "C" int __cxa_atexit();
 extern "C" int __cxa_atexit() { return 0; }
 
 
-/***********************************************************************
-* bad_magic.
-* Return YES if the header has invalid Mach-o magic.
-**********************************************************************/
-bool bad_magic(const headerType *mhdr)
-{
-    return (mhdr->magic != MH_MAGIC  &&  mhdr->magic != MH_MAGIC_64  &&  
+/* 判断是否支持设备的 CPU
+ * @note mach_header_64 结构成员 magic 表示支持设备的 CPU 位数
+ * @return 如果既不支持 32 位 CPU，又不支持 64 位 CPU，则返回 YES；否则返回 NO
+*/
+bool bad_magic(const headerType *mhdr){
+    return (mhdr->magic != MH_MAGIC  &&  mhdr->magic != MH_MAGIC_64  &&
             mhdr->magic != MH_CIGAM  &&  mhdr->magic != MH_CIGAM_64);
 }
 
-
-static header_info * addHeader(const headerType *mhdr, const char *path, int &totalClasses, int &unoptimizedTotalClasses)
-{
+static header_info * addHeader(const headerType *mhdr, const char *path, int &totalClasses, int &unoptimizedTotalClasses){
     header_info *hi;
 
-    if (bad_magic(mhdr)) return NULL;
+    if (bad_magic(mhdr)) return NULL;//如果不支持设备的 CPU，则直接返回
 
     bool inSharedCache = false;
 
-    // Look for hinfo from the dyld shared cache.
+    // 从 dyld 共享缓存中查找 hinfo
     hi = preoptimizedHinfoForHeader(mhdr);
     if (hi) {
-        // Found an hinfo in the dyld shared cache.
+        // 在 dyld 共享缓存中发现 hinfo
 
-        // Weed out duplicates.
+        //剔除重复
         if (hi->isLoaded()) {
             return NULL;
         }
 
         inSharedCache = true;
 
-        // Initialize fields not set by the shared cache
+        // 初始化未由共享缓存设置的字段
         // hi->next is set by appendHeader
         hi->setLoaded(true);
-
+        
         if (PrintPreopt) {
             _objc_inform("PREOPTIMIZATION: honoring preoptimized header info at %p for %s", hi, hi->fname());
         }
@@ -250,7 +247,7 @@ static header_info * addHeader(const headerType *mhdr, const char *path, int &to
         _objc_fatal("shouldn't be here");
 #endif
 #if DEBUG
-        // Verify image_info
+        // 验证 image_info
         size_t info_size = 0;
         const objc_image_info *image_info = _getObjcImageInfo(mhdr,&info_size);
         assert(image_info == hi->info());
@@ -258,14 +255,14 @@ static header_info * addHeader(const headerType *mhdr, const char *path, int &to
     }
     else 
     {
-        // Didn't find an hinfo in the dyld shared cache.
+        // 在 dyld 共享缓存中没有发现 hinfo
 
-        // Weed out duplicates
+        // 剔除重复
         for (hi = FirstHeader; hi; hi = hi->getNext()) {
             if (mhdr == hi->mhdr()) return NULL;
         }
 
-        // Locate the __OBJC segment
+        // 定位 __OBJC 段
         size_t info_size = 0;
         unsigned long seg_size;
         const objc_image_info *image_info = _getObjcImageInfo(mhdr,&info_size);
@@ -419,37 +416,34 @@ static bool shouldRejectGCImage(const headerType *mhdr)
 #endif
 
 
-/***********************************************************************
-* map_images_nolock
-* Process the given images which are being mapped in by dyld.
-* All class registration and fixups are performed (or deferred pending
-* discovery of missing superclasses etc), and +load methods are called.
-*
-* info[] is in bottom-up order i.e. libobjc will be earlier in the 
-* array than any library that links to libobjc.
-*
-* Locking: loadMethodLock(old) or runtimeLock(new) acquired by map_images.
-**********************************************************************/
+
 #if __OBJC2__
 #include "objc-file.h"
 #else
 #include "objc-file-old.h"
 #endif
 
-void 
-map_images_nolock(unsigned mhCount, const char * const mhPaths[],
-                  const struct mach_header * const mhdrs[])
-{
+/* 处理被映射到 dyld 的指定镜像
+ * 执行所有的类注册和修正（或延迟等待发现丢失的父类等），并调用 +load 方法。
+ * 完成所有 class 的注册、fixup等工作,还有初始化自动释放池、初始化 side table 等工作并在函数后端调用了 _read_images
+ * 初始化环境.
+ * 注册所有的类.
+ * 指定 _read_images来处理信息.
+ * info[] 是自下而上的顺序，即在数组中与其它库相比 libobjc 将最早链接到 libobjc。
+ *
+ * @param mhCount
+ * @param mhPaths[] 存储路径的字符串数组
+ * @param mhdrs[] 存储（架构头文件）的结构数组
+ */
+void map_images_nolock(unsigned mhCount, const char * const mhPaths[], const struct mach_header * const mhdrs[]){
     static bool firstTime = YES;
     header_info *hList[mhCount];
     uint32_t hCount;
     size_t selrefCount = 0;
-
-    // 如果需要，执行首次初始化。
-    // 在普通库初始化器之前调用此函数。
-    // fixme 延迟初始化，直到找到一个使用 objc 的镜像?
-    if (firstTime) {
-        preopt_init();
+    
+    /* 1、优化共享缓存   */
+    if (firstTime) {// 如果需要，执行首次初始化
+        preopt_init();//在普通库初始化之前优化共享缓存
     }
 
     if (PrintImages) {
@@ -457,28 +451,27 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
     }
 
 
-    // 查找带有Objective-C元数据的所有镜像。
-    hCount = 0;
-
-    // Count classes. Size various table based on the total.
+    hCount = 0;// 查找带有Objective-C元数据的所有镜像
+    //统计类的数量，调整各种哈希表的大小。
     int totalClasses = 0;
     int unoptimizedTotalClasses = 0;
     {
         uint32_t i = mhCount;
+        //倒序遍历
         while (i--) {
             const headerType *mhdr = (const headerType *)mhdrs[i];
-
+            
             auto hi = addHeader(mhdr, mhPaths[i], totalClasses, unoptimizedTotalClasses);
             if (!hi) {
                 // 此条目中没有objc数据
                 continue;
             }
             
-            if (mhdr->filetype == MH_EXECUTE) {
+            if (mhdr->filetype == MH_EXECUTE) {//文件类型为可执行文件
                 // 根据主可执行文件的大小调整一些数据结构的大小
 #if __OBJC2__
                 size_t count;
-                _getObjc2SelectorRefs(hi, &count);
+                _getObjc2SelectorRefs(hi, &count);//获取所有的选择器
                 selrefCount += count;
                 _getObjc2MessageRefs(hi, &count);
                 selrefCount += count;
@@ -486,19 +479,16 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
                 _getObjcSelectorRefs(hi, &selrefCount);
 #endif
                 
-#if SUPPORT_GC_COMPAT
-                // Halt if this is a GC app.
+#if SUPPORT_GC_COMPAT //注意：iOS 不兼容 Garbage Collection
+                // 如果这是GC应用程序，则停止。
                 if (shouldRejectGCApp(hi)) {
-                    _objc_fatal_with_reason
-                        (OBJC_EXIT_REASON_GC_NOT_SUPPORTED, 
-                         OS_REASON_FLAG_CONSISTENT_FAILURE, 
-                         "Objective-C garbage collection " 
-                         "is no longer supported.");
+                    _objc_fatal_with_reason(OBJC_EXIT_REASON_GC_NOT_SUPPORTED,
+                                            OS_REASON_FLAG_CONSISTENT_FAILURE,
+                                            "Objective-C garbage collection is no longer supported.");
                 }
 #endif
             }
-            
-            hList[hCount++] = hi;
+            hList[hCount++] = hi;// 加载所有的类
             
             if (PrintImages) {
                 _objc_inform("IMAGES: loading image for %s%s%s%s%s\n", 
@@ -511,34 +501,32 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
         }
     }
 
-    // 执行一次性的运行时初始化，必须延迟到找到可执行文件本身。这需要在进一步初始化之前完成。(如果可执行文件不包含Objective-C代码，但Objective-C稍后会动态加载，则可执行文件可能不在此 infoList 中。
+    //执行一次性的运行时初始化，必须延迟到找到可执行文件本身。这需要在进一步初始化之前完成。(如果可执行文件不包含Objective-C代码，但Objective-C稍后会动态加载，则可执行文件可能不在此 infoList 中。
     if (firstTime) {
-        sel_init(selrefCount);
-        arr_init();
+        sel_init(selrefCount);//初始化方法列表并注册内部使用的方法
+        arr_init();// 初始化自动释放池与哈希表
 
-#if SUPPORT_GC_COMPAT
-        // Reject any GC images linked to the main executable.
-        // We already rejected the app itself above.
-        // Images loaded after launch will be rejected by dyld.
-
+#if SUPPORT_GC_COMPAT //注：iOS 不兼容 Garbage Collection
+        
+        /* 拒绝任何链接到主程序的GC镜像。
+         * 我们已经拒绝了上面的应用程序本身
+         * 启动后加载的镜像将被 dyld 拒绝。
+         */
         for (uint32_t i = 0; i < hCount; i++) {
             auto hi = hList[i];
             auto mh = hi->mhdr();
             if (mh->filetype != MH_EXECUTE  &&  shouldRejectGCImage(mh)) {
-                _objc_fatal_with_reason
-                    (OBJC_EXIT_REASON_GC_NOT_SUPPORTED, 
+                _objc_fatal_with_reason(OBJC_EXIT_REASON_GC_NOT_SUPPORTED,
                      OS_REASON_FLAG_CONSISTENT_FAILURE, 
-                     "%s requires Objective-C garbage collection "
-                     "which is no longer supported.", hi->fname());
+                     "%s requires Objective-C garbage collection which is no longer supported.", hi->fname());
             }
         }
 #endif
 
 #if TARGET_OS_OSX
-        // Disable +initialize fork safety if the app is too old (< 10.13).
-        // Disable +initialize fork safety if the app has a
-        //   __DATA,__objc_fork_ok section.
-
+        /* 如果应用程序太旧(< 10.13)，禁用 +initialize 更安全。
+         * 如果应用程序有 __DATA ，__objc_fork_ok 段，则禁用 +initialize。
+         */
         if (dyld_get_program_sdk_version() < DYLD_MACOSX_VERSION_10_13) {
             DisableInitializeForkSafety = true;
             if (PrintInitializing) {
@@ -562,7 +550,7 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
                                  "a __DATA,__objc_fork_ok section");
                 }
             }
-            break;  // assume only one MH_EXECUTE image
+            break;  // 假设只有一个可执行文件的镜像
         }
 #endif
 
@@ -875,8 +863,9 @@ void _objc_init(void)
     static_init();//运行 C++ 静态构造函数
     lock_init();// 锁的初始化
     exception_init();//初始化 libobjc 的异常处理系统
-
-    /* 首先注册 unmap_image，以防某些 +load 取消映射
+    
+    /* 注册dyld事件的监听：
+     * 注册 unmap_image，以防某些 +load 取消映射
      * map_images 函数是初始化的关键，内部完成了大量 Runtime 环境的初始化操作。
      */
     _dyld_objc_notify_register(&map_images, load_images, unmap_image);

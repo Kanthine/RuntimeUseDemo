@@ -38,31 +38,27 @@ static NXMapTable *namedSelectors;
 static SEL search_builtins(const char *key);
 
 
-/***********************************************************************
-* sel_init
-* Initialize selector tables and register selectors used internally.
-**********************************************************************/
-void sel_init(size_t selrefCount)
-{
+/* 初始化选择器列表并注册内部使用的选择器
+*/
+void sel_init(size_t selrefCount){
     // save this value for later
     SelrefCount = selrefCount;
 
-#if SUPPORT_PREOPT
+#if SUPPORT_PREOPT // 在 iOS 系统上必须支持 dyld 共享缓存优化
+    //初始化选择器列表
     builtins = preoptimizedSelectors();
-
+    
     if (PrintPreopt  &&  builtins) {
-        uint32_t occupied = builtins->occupied;
-        uint32_t capacity = builtins->capacity;
+        uint32_t occupied = builtins->occupied;//占有的
+        uint32_t capacity = builtins->capacity;//容量
         
         _objc_inform("PREOPTIMIZATION: using selopt at %p", builtins);
         _objc_inform("PREOPTIMIZATION: %u selectors", occupied);
-        _objc_inform("PREOPTIMIZATION: %u/%u (%u%%) hash table occupancy",
-                     occupied, capacity,
-                     (unsigned)(occupied/(double)capacity*100));
+        _objc_inform("PREOPTIMIZATION: %u/%u (%u%%) hash table occupancy",occupied, capacity,(unsigned)(occupied/(double)capacity*100));
         }
 #endif
 
-    // Register selectors used by libobjc
+    //注册内部使用的选择器
 
 #define s(x) SEL_##x = sel_registerNameNoLock(#x, NO)
 #define t(x,y) SEL_##y = sel_registerNameNoLock(#x, NO)

@@ -2813,7 +2813,6 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
     //设置上下文信息
 	setContext(mainExecutableMH, argc, argv, envp, apple);
 	
-	// Pickup the pointer to the exec path.
     //获取可执行文件的路径
 	sExecPath = apple[0];
 	bool ignoreEnvironmentVariables = false;
@@ -2853,7 +2852,7 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 	if ( sEnv.DYLD_PRINT_ENV ) //如果设置了 DYLD_PRINT_ENV 环境变量，则打印环境变量
 		printEnvironmentVariables(envp);
 	getHostInfo();//获取当前运行架构的信息
-	// install gdb notifier
+	// 注册 gdb 通知器
 	stateToHandlers(dyld_image_state_dependents_mapped, sBatchHandlers)->push_back(notifyGDB);
 	// make initial allocations large enough that it is unlikely to need to be re-alloced
 	sAllImages.reserve(200);
@@ -2864,28 +2863,23 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 	sImageFilesNeedingDOFUnregistration.reserve(8);
 	
 	try {
-		// instantiate ImageLoader for main executable
         //加载可执行文件并生成一个 ImageLoader 实例对象
 		sMainExecutable = instantiateFromLoadedImage(mainExecutableMH, mainExecutableSlide, sExecPath);
 		sMainExecutable->setNeverUnload();
 		gLinkContext.mainExecutable = sMainExecutable;
-		// load shared cache
 		checkSharedRegionDisable();//检查共享缓存是否开启：在 iOS 中必须开启
 	#if DYLD_SHARED_CACHE_SUPPORT
 		if ( gLinkContext.sharedRegionMode != ImageLoader::kDontUseSharedRegion )
 			mapSharedCache();//检查共享缓存是否映射到了共享区域
 	#endif
-		// load any inserted libraries
         //加载所有 DYLD_INSERT_LIBRARIES 指定的库
 		if	( sEnv.DYLD_INSERT_LIBRARIES != NULL ) {
 			for (const char* const* lib = sEnv.DYLD_INSERT_LIBRARIES; *lib != NULL; ++lib) 
 				loadInsertedDylib(*lib);
 		}
-		// record count of inserted libraries so that a flat search will look at 
-		// inserted libraries, then main, then others.
+        //记录插入库的数量，以便平面搜索将查看插入的库，然后是 main，然后是其他库。
 		sInsertedDylibCount = sAllImages.size()-1;
 
-		// link main executable
 		gLinkContext.linkingMainExecutable = true;
 		link(sMainExecutable, sEnv.DYLD_BIND_AT_LAUNCH, ImageLoader::RPathChain(NULL, NULL));//链接主程序
 		gLinkContext.linkingMainExecutable = false;
@@ -2895,10 +2889,11 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 		}
 		result = (uintptr_t)sMainExecutable->getMain();
 
-		// link any inserted libraries
-		// do this after linking main executable so that any dylibs pulled in by inserted 
-		// dylibs (e.g. libSystem) will not be in front of dylibs the program uses
-        //链接插入的动态库
+
+		/* 链接插入的动态库
+         * 在链接主程序之后执行这个操作，以便插入任何 dylib
+         * dylibs (例如libSystem) 不会出现在程序使用的dylibs之前
+         */
 		if ( sInsertedDylibCount > 0 ) {
 			for(unsigned int i=0; i < sInsertedDylibCount; ++i) {
 				ImageLoader* image = sAllImages[i+1];
@@ -2907,10 +2902,10 @@ _main(const struct mach_header* mainExecutableMH, uintptr_t mainExecutableSlide,
 		}
 		
 	#if SUPPORT_OLD_CRT_INITIALIZATION
-		// Old way is to run initializers via a callback from crt1.o
-		if ( ! gRunInitializersOldWay ) 
+        //旧的方法是通过从 crt1.o 回调来运行初始化器
+		if ( ! gRunInitializersOldWay )
 	#endif
-		initializeMainExecutable(); // run all initializers
+		initializeMainExecutable(); // 运行所有的初始化
 	}
 	catch(const char* message) {
 		halt(message);
