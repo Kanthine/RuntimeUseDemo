@@ -10,6 +10,8 @@
 #import <objc/runtime.h>
 @implementation UIButton (DoubleHit)
 + (void)load{
+    NSLog(@"%s",__func__);
+    
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         
