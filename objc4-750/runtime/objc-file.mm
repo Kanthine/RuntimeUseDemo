@@ -1,30 +1,42 @@
-/*
- * Copyright (c) 1999-2007 Apple Inc.  All Rights Reserved.
- * 
- * @APPLE_LICENSE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
+/* 编译器：把一种编程语言(原始语言)转换为另一种编程语言(目标语言)的程序叫做编译器
+ *
+ * 大多数编译器由两部分组成：前端和后端
+ *      前端负责词法分析，语法分析，生成中间代码 IR；
+ *      后端以中间代码 IR 作为输入，进行行架构无关的代码优化，接着针对不同架构生成不同的机器码。
+ * 前后端依赖统一格式的中间代码(IR)，使得前后端可以独立的变化。新增一门语言只需要修改前端，而新增一个CPU架构只需要修改后端即可。
+ *
+ * 注：Objective-C/C/C++使用的编译器前端是 clang，swift是swift，后端都是 LLVM。
+ *
+ * 从前端到后端 .m文件 编译的大致流程：
+ * .m文件 -> 预处理器 -> 词法分析 -> 语法分析 -> CodeGen -> IR -> LLVM Optimizer -> 汇编器（.o）-> linker -> Mach-O 文件
+ * 1、预处理器：预处理会替进行头文件引入，宏替换，注释处理，条件编译(#ifdef)等操作。
+ * 2、词法分析：词法分析器读入源文件的字符流，将他们组织称有意义的词素(lexeme)序列，对于每个词素，此法分析器产生词法单元（token）作为输出。
+ * 3、语法分析：词法分析的Token流会被解析成一颗抽象语法树(abstract syntax tree - AST)。有了抽象语法树，clang就可以对这个树进行分析，找出代码中的错误。比如类型不匹配，亦或Objective-C中向target发送了一个未实现的消息。
+ * 4、CodeGen：CodeGen遍历语法树，生成LLVM IR代码。LLVM IR是前端的输出，后端的输入。
+ *            Objective-C代码在这一步会进行runtime的桥接：property合成，ARC处理等。
+ * 5、生成汇编代码：LLVM对IR进行优化后，会针对不同架构生成不同的目标代码，最后以汇编代码的格式输出：
+ * 6、汇编器：汇编器以汇编代码作为输入，将汇编代码转换为机器代码，最后输出目标文件(object file)。
+ * 7、链接：链接器会把编译器编译生成的多个文件（.o文件 .dylib文件 .a文件 .tbd文件等）链接成一个可执行文件 Mach-O。链接并不会产生新的代码，只是在现有代码的基础上做移动和补丁。
+ *       链接器的输入可能是以下几种文件：
+ *              object file(.o)，单个源文件的编辑结果，包含了由符号表示的代码和数据。
+ *              动态库(.dylib)，mach o类型的可执行文件，链接的时候只会绑定符号，动态库会被拷贝到app里，运行时加载
+ *              静态库(.a)，由ar命令打包的一组.o文件，链接的时候会把具体的代码拷贝到最后的Mach-O
+ *              tbd，只包含符号 Symbols 的库文件
+ *
+ *
+ * XCode编译的详细的步骤如下：
+ * 创建Product.app的文件夹
+ * 把Entitlements.plist写入到DerivedData里，处理打包的时候需要的信息（比如application-identifier）。
+ * 创建一些辅助文件，比如各种.hmap，这是headermap文件，具体作用下文会讲解。
+ * 执行CocoaPods的编译前脚本：检查Manifest.lock文件。
+ * 编译.m文件，生成.o文件。
+ * 链接动态库，.o文件，生成一个Mach-O格式的可执行文件。
+ * 编译assets，编译storyboard，链接storyboard
+ * 拷贝动态库Logger.framework，并且对其签名
+ * 执行CocoaPods编译后脚本：拷贝CocoaPods Target生成的Framework
+ * 对Demo.App签名，并验证（validate）
+ * 生成Product.app
  */
-
-#if __OBJC2__
-
-#include "objc-private.h"
-#include "objc-file.h"
 
 /* Mach-O 类型的文件：是一种用于可执行文件、目标代码、动态库、内核转储的文件格式；
  *
@@ -68,30 +80,22 @@
  *       __DATA,__objc_superrefs: OC类超类引用(super)
  *       __DATA,__objc_protolrefs: OC原型引用
  *       __DATA, __bss: 没有初始化和初始化为0 的全局变量
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
  */
 
-/* 获取某个区段数据
+
+#if __OBJC2__
+
+#include "objc-private.h"
+#include "objc-file.h"
+
+
+/* Mach-O 程序的 Runtime 接口：getsectiondata() 函数从 Mach-O 文件获取某个区段数据
  * @param mhp 头信息，文件类型, 目标架构
  * @param segname 段名
  * @param sectname 段中区的名称
  * @param size 函数内部赋值所获取数据的字节数
  * @return uint8_t 返回的数据
-uint8_t *getsectiondata(const struct mach_header_64 *mhp,const char *segname,const char *sectname,unsigned long *size);
  */
-
 
 /* 获取 __DATA区段 或 __DATA_CONST区段 或 __DATA_DIRTY区段 的指定数据
  * @param mhp 头信息，文件类型, 目标架构
@@ -115,6 +119,7 @@ template <typename T> T* getDataSection(const headerType *mhdr, const char *sect
     return data;
 }
 
+//宏函数：用于获取 Mach-O 文件的某些数据
 #define GETSECT(name, type, sectname)                                   \
     type *name(const headerType *mhdr, size_t *outCount) {              \
         return getDataSection<type>(mhdr, sectname, nil, outCount);     \
